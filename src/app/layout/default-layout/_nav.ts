@@ -11,19 +11,23 @@ export const navItems: INavData[] = [
       text: 'NEW'
     }
   },
+  
   {
-  name: 'Task',
+      name: 'Task Management',
       url: '/dashboard/task',
+      iconComponent: { name: 'cil-task' }
 
   },
   {
-  name: 'User',
+      name: 'User Management',  
       url: '/dashboard/user',
-
-  },
+      iconComponent: { name: 'cil-people' },  // CoreUI icon
+      
+  },   
   {
-  name: 'Stat',
+       name: 'Statistiques',
       url: '/dashboard/stat',
+      iconComponent: { name: 'cil-stat' },
 
   },
   {

@@ -28,5 +28,12 @@ export const routes: Routes = [
     data: {
       title: 'Register Page'
     }
+  },
+  {
+    path: 'auth',
+    loadComponent: () => import('./auth/auth.component').then(m => m.AuthComponent),
+    data: {
+      title: 'Auth Page'
+    }
   }
 ];
