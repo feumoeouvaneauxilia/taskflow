@@ -6,6 +6,8 @@ import { catchError, Observable, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 import { CookieService } from 'ngx-cookie-service';
 
+
+
 @Injectable({
   providedIn: 'root'
 })
@@ -23,7 +25,7 @@ export class AuthService {
   }
 
   saveToken(token: string): void {
-    localStorage.setItem('jwtToken', token);
+    this.cookieService.set('access_token', token);
   }
 
   getToken(): string | null {
@@ -100,7 +102,7 @@ logout(): void {
   });
 }
 
-login(credentials: { username: string; password: string }): Observable<any> {
+login(credentials: { email: string; password: string }): Observable<any> {
   return this.http.post<any>(`${environment.baseUrl}/auth/login`, credentials);
 }
 }

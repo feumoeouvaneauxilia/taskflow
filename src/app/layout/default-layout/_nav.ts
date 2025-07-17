@@ -6,10 +6,7 @@ export const navItems: INavData[] = [
     url: '/dashboard',
 
     iconComponent: { name: 'cil-speedometer' },
-    badge: {
-      color: 'info',
-      text: 'NEW'
-    }
+  
   },
   
   {
@@ -21,13 +18,13 @@ export const navItems: INavData[] = [
   {
       name: 'User Management',  
       url: '/dashboard/user',
-      iconComponent: { name: 'cil-people' },  // CoreUI icon
+      iconComponent: { name: 'cil-people' },  
       
   },   
   {
        name: 'Statistiques',
       url: '/dashboard/stat',
-      iconComponent: { name: 'cil-stat' },
+      iconComponent: { name: 'cil-charts' },
 
   },
   {

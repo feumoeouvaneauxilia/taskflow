@@ -47,6 +47,16 @@ export class DefaultHeaderComponent extends HeaderComponent {
 
   constructor() {
     super();
+    // Example: get user name from localStorage (adapt as needed)
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        this.userName = user.name || '';
+      } catch {
+        this.userName = '';
+      }
+    }
   }
 
   sidebarId = input('sidebar1');
@@ -125,5 +135,8 @@ export class DefaultHeaderComponent extends HeaderComponent {
     { id: 3, title: 'Add new layouts', value: 75, color: 'info' },
     { id: 4, title: 'Angular Version', value: 100, color: 'success' }
   ];
+
+  user = { name: 'User' }; // Replace with actual user fetching logic
+  userName: string = '';
 
 }

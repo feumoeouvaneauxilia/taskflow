@@ -1,21 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
 
-*{
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Montserrat', sans-serif;
-}
+// *{
+//     margin: 0;
+//     padding: 0;
+//     box-sizing: border-box;
+//     font-family: 'Montserrat', sans-serif;
+// }
 
-body{
-    background-color: #c9d6ff;
-    background: linear-gradient(to right, #e2e2e2, #c9d6ff);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    height: 100vh;
-}
+// body{
+//     background-color: #c9d6ff;
+//     background: linear-gradient(to right, #e2e2e2, #c9d6ff);
+//     display: flex;
+//     align-items: center;
+//     justify-content: center;
+//     flex-direction: column;
+//     height: 100vh;
+// }
+
 
 .container{
     background-color: #fff;
@@ -47,7 +48,7 @@ body{
 }
 
 .container button{
-    background-color: #2da0a8;
+    background-color: #e53935; // red accent
     color: #fff;
     font-size: 12px;
     padding: 10px 45px;
@@ -63,6 +64,7 @@ body{
 .container button.hidden{
     background-color: transparent;
     border-color: #fff;
+    color: #e53935;
 }
 
 .container form{
@@ -84,6 +86,33 @@ body{
     border-radius: 8px;
     width: 100%;
     outline: none;
+}
+
+input:focus {
+    border: 1.5px solid #e53935 !important; // red accent on focus
+    outline: none;
+}
+
+.red-accent {
+    color: #e53935;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.eye-icon {
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #e53935;
+    font-size: 18px;
+    z-index: 2;
+}
+
+.input-group {
+    position: relative;
+    width: 100%;
 }
 
 .form-container{
@@ -161,9 +190,8 @@ body{
 }
 
 .toggle{
-    background-color: #2da0a8;
-    height: 100%;
-    background: linear-gradient(to right, #5c6bc0, #2da0a8);
+    background-color: #232323; // black/grey
+    background: linear-gradient(to right, #232323, #444); // greyish black gradient
     color: #fff;
     position: relative;
     left: -100%;
@@ -190,6 +218,7 @@ body{
     top: 0;
     transform: translateX(0);
     transition: all 0.6s ease-in-out;
+    border-top: 3px solid #e53935; // red accent
 }
 
 .toggle-left{
@@ -207,4 +236,19 @@ body{
 
 .container.active .toggle-right{
     transform: translateX(200%);
+}
+.error-message {
+  color: #ff4d4d;
+  font-size: 12px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+input.invalid {
+  border: 1px solid #ff4d4d !important;
+}
+
+button:disabled {
+  background-color: #cccccc !important;
+  cursor: not-allowed !important;
 }
