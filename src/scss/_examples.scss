@@ -3,6 +3,8 @@
 @use "@coreui/coreui/scss/mixins/color-mode" as *;
 
 .example {
+  font-family: 'Poppins', sans-serif;
+
   &:not(:first-child) {
     margin-top: 1.5rem;
   }

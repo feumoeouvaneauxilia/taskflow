@@ -3,11 +3,33 @@
 
 body {
   background-color: var(--cui-tertiary-bg);
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 *{
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
+
+// Sidebar red styling
+// .sidebar {
+//   background-color: #dc3545 !important; // Bootstrap red
+// }
+
+.sidebar .nav-link {
+  color: white !important;
+}
+
+.sidebar .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.sidebar .nav-link.active {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.sidebar-brand {
+  color: white !important;
+}
+
 .wrapper {
   width: 100%;
   padding-inline: var(--cui-sidebar-occupy-start, 0) var(--cui-sidebar-occupy-end, 0);

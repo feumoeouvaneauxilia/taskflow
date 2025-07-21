@@ -52,7 +52,7 @@ export class AuthComponent {
     this.authService.login({ email, password }).subscribe({
       next: (response: { accessToken: string; refreshToken: string; }) => {
         this.authService.saveToken(response.accessToken);
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/dashboard/dash']);
       },
       error: (err: string) => {
         this.errorMessage = err || 'Login failed. Please check your credentials.';
