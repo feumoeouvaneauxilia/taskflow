@@ -4,6 +4,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { AppComponent } from './app.component';
 import { DashComponent } from './views/dashboard/dash/dash.component';
+import { SpinnerModule } from '@coreui/angular';
 
 @NgModule({
   declarations: [
@@ -13,7 +14,8 @@ import { DashComponent } from './views/dashboard/dash/dash.component';
   imports: [
     BrowserModule,
     HttpClientModule,
-    FormsModule
+    FormsModule,
+    SpinnerModule
   ],
   providers: [],
   bootstrap: [AppComponent]
