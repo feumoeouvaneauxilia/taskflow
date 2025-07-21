@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environment/environment';
-// ...existing code...
 import { catchError, Observable, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 import { CookieService } from 'ngx-cookie-service';
@@ -66,16 +65,25 @@ logout(): void {
       const headers = { Authorization: `Bearer ${token}` };
       this.http.post(`${environment.baseUrl}/auth/logout`, {}, { headers }).subscribe(
         () => {
-          localStorage.removeItem('jwtToken');
-          this.router.navigate(['/login']);
+          this.clearTokens();
+          this.router.navigate(['/auth']);
         },
         (error) => {
           console.error('Error during logout:', error);
+          this.clearTokens();
+          this.router.navigate(['/auth']);
         }
       );
     } else {
-      this.router.navigate(['/login']);
+      this.clearTokens();
+      this.router.navigate(['/auth']);
     }
+  }
+
+  private clearTokens(): void {
+    localStorage.removeItem('jwtToken');
+    this.cookieService.delete('access_token');
+    this.cookieService.deleteAll();
   }
 
   isLoggedIn(): Observable<boolean> {

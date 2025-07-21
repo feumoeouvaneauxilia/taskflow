@@ -23,14 +23,14 @@ export const navItems: INavData[] = [
   {
       name: 'User Management',  
       url: '/dashboard/user',
-      iconComponent: { name: 'cil-people' },  
+      iconComponent: { name: 'cil-user' },  
       
   },   
   
   {
        name: 'Statistiques',
       url: '/dashboard/stat',
-      iconComponent: { name: 'cil-charts' },
+      iconComponent: { name: 'cil-chart' },
   },
 
   {
