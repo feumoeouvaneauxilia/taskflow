@@ -35,4 +35,11 @@ export class UserService {
   updateUserRole(id: string | number, role: any): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/${id}/role`, role);
   }
+  updateUserStatus(userId: string, isActive: boolean): Observable<any> {
+    return this.http.patch(`${environment.baseUrl}/users/${userId}/status`, { isActive });
+  }
+
+  // updateUserRights(userId: string, rights: any): Observable<any> {
+  //   return this.http.patch(`${environment.baseUrl}/users/${userId}/rights`, rights);
+  // }
 }
