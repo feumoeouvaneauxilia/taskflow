@@ -22,7 +22,7 @@ import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
   ],
   templateUrl: './user.component.html',
   styleUrl: './user.component.scss',
-  schemas: [CUSTOM_ELEMENTS_SCHEMA] // For custom web components
+  schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class UserComponent implements OnInit {
   users: any[] = [];
@@ -54,28 +54,34 @@ export class UserComponent implements OnInit {
     );
   }
 
-  openRightsModal(user: any): void {
-    this.selectedUser = user;
-    this.rightsForm = { ...user.rights || {} };
-    this.showRightsModal = true;
-  }
+  // openRightsModal(user: any): void {
+  //   this.selectedUser = user;
+  //   this.rightsForm = { ...user.rights || {} };
+  //   this.showRightsModal = true;
+  // }
 
-  // saveUserRights(): void {
-  //   if (!this.selectedUser) return;
+//   saveUserRights(): void {
+//     if (!this.selectedUser) return;
     
-  //   this.userService.updateUserRights(this.selectedUser.id, this.rightsForm).subscribe(
-  //     () => {
-  //       const user = this.users.find(u => u.id === this.selectedUser.id);
-  //       if (user) {
-  //         user.rights = { ...this.rightsForm };
-  //       }
-  //       this.showRightsModal = false;
-  //     },
-  //     (error) => console.error('Error updating user rights:', error)
-  //   );
-  // }
+//     this.userService.updateUserRights(this.selectedUser.id, this.rightsForm).subscribe(
+//       () => {
+//         const user = this.users.find(u => u.id === this.selectedUser.id);
+//         if (user) {
+//           user.rights = { ...this.rightsForm };
+//         }
+//         this.showRightsModal = false;
+//       },
+//       (error) => console.error('Error updating user rights:', error)
+//     );
+//   }
 
-  // closeRightsModal(): void {
-  //   this.showRightsModal = false;
-  // }
+//   closeRightsModal(): void {
+//     this.showRightsModal = false;
+//   }
+
+//   formatRoles(roles: string[]): string {
+//     return roles?.join(', ') || '';
+//   }
+// 
+
 }

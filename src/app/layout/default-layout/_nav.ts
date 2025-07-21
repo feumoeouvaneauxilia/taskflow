@@ -28,11 +28,16 @@ export const navItems: INavData[] = [
   },   
   
   {
-       name: 'Statistiques',
+      name: 'Statistiques',
       url: '/dashboard/stat',
-      iconComponent: { name: 'cil-charts' },
+      iconComponent: { name: 'cil-bar-chart' },
   },
-
+  
+//   {
+//        name: 'settings',
+//       url: '/dashboard/logout',
+//       iconComponent: { name: 'cil-settings' },
+//   },
   {
        name: 'Logout',
       url: '/dashboard/logout',
