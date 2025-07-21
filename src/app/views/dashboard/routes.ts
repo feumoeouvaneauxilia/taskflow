@@ -36,6 +36,13 @@ export const routes: Routes = [
         data: {
           title: 'dash'
         }
+      },
+      {
+        path: 'logout',
+        loadComponent: () => import('./logout/logout.component').then(m => m.LogoutComponent),
+        data: {
+          title: 'Logout'
+        }
       }
     ]
   }
