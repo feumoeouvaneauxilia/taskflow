@@ -1,0 +1,35 @@
+.graph-canvas-full {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #1a202c;
+  z-index: 0;
+}
+canvas {
+  background-color: #2d3748;
+  display: block;
+  border-radius: 0.5rem;
+  width: 100vw;
+  height: 100vh;
+  cursor: grab;
+}
+canvas.grabbing {
+  cursor: grabbing;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #2d3748;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6a768f;
+}

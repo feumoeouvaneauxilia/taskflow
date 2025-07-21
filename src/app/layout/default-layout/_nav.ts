@@ -1,29 +1,36 @@
 import { INavData } from '@coreui/angular';
 
 export const navItems: INavData[] = [
-  {
-    name: 'Dashboard',
-    url: '/dashboard',
+  // {
+  //   name: 'Dashboard',
+  //   url: '/dashboard',
 
-    iconComponent: { name: 'cil-speedometer' },
-    badge: {
-      color: 'info',
-      text: 'NEW'
-    }
+  //   iconComponent: { name: 'cil-speedometer' },
+  
+  // },
+  {
+       name: 'Dashboard',
+      url: '/dashboard/dash',
+      iconComponent: { name: 'cil-speedometer' },
+
   },
   {
-  name: 'Task',
+      name: 'Task Management',
       url: '/dashboard/task',
+      iconComponent: { name: 'cil-task' }
 
   },
   {
-  name: 'User',
+      name: 'User Management',  
       url: '/dashboard/user',
-
-  },
+      iconComponent: { name: 'cil-people' },  
+      
+  },   
+  
   {
-  name: 'Stat',
+       name: 'Statistiques',
       url: '/dashboard/stat',
+      iconComponent: { name: 'cil-charts' },
 
   },
   {

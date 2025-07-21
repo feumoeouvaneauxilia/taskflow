@@ -8,9 +8,21 @@
 >
   <c-sidebar-header class="border-bottom">
     <c-sidebar-brand [routerLink]="[]">
-      <svg [class]="{icon: false}" cIcon class="sidebar-brand-full" height="32" name="logo" title="CoreUI Logo"></svg>
-      <svg cIcon class="sidebar-brand-narrow" height="32" name="signet" title="CoreUI Logo"></svg>
-    </c-sidebar-brand>
+  <!-- Full logo (visible when sidebar is expanded) -->
+  <img
+    src="assets/images/logo1.png"
+    class="sidebar-brand-full"
+    height="32"
+    alt="TaskFlow"
+  />
+  <!-- Collapsed logo (icon version, visible when sidebar is narrow) -->
+  <img
+    src="assets/images/logo1.png"
+    class="sidebar-brand-narrow"
+    height="32"
+    alt="TaskFlow"
+  />
+</c-sidebar-brand>
   </c-sidebar-header>
 
   <ng-scrollbar pointerEventsMethod="scrollbar" visibility="hover">

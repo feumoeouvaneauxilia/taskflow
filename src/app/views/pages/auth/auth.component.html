@@ -1,0 +1,93 @@
+<div class="container" [class.active]="isActive">
+  <div class="form-container sign-up">
+    <form [formGroup]="registerForm" (ngSubmit)="onRegister()">
+      <h1><span class="red-accent">Create Account</span></h1>
+      <span>or use your email for registration</span>
+      <input 
+        type="text" 
+        formControlName="username" 
+        placeholder="Username"
+        [class.invalid]="registerForm.get('username')?.invalid && registerForm.get('username')?.touched"
+      >
+      <input 
+        type="email" 
+        formControlName="email" 
+        placeholder="Email"
+        [class.invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
+      >
+      <div class="input-group">
+        <input 
+          [type]="registerPasswordVisible ? 'text' : 'password'"
+          formControlName="password" 
+          placeholder="Password"
+          [class.invalid]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
+        >
+        <span class="eye-icon" (click)="registerPasswordVisible = !registerPasswordVisible">
+          <ng-container *ngIf="registerPasswordVisible; else closedEye1">
+            <!-- open eye SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="#e53935"><path d="M12 6c-5 0-9 4-9 6s4 6 9 6 9-4 9-6-4-6-9-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+          </ng-container>
+          <ng-template #closedEye1>
+            <!-- closed eye SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="#e53935"><path d="M12 6c-5 0-9 4-9 6s4 6 9 6c1.85 0 3.55-.63 4.93-1.69l1.42 1.42C16.36 19.07 14.28 20 12 20c-5 0-9-4-9-6s4-6 9-6c2.28 0 4.36.93 5.93 2.27l-1.42 1.42C15.55 6.63 13.85 6 12 6zm0 10c-2.21 0-4-1.79-4-4 0-.46.08-.9.21-1.32l1.49 1.49c.13.13.29.21.47.21s.34-.08.47-.21l1.49-1.49c.13.13.21.29.21.47 0 1.1-.9 2-2 2zm7.19-2.19l-1.41-1.41C18.36 11.07 20 9.13 20 8c0-1.1-.9-2-2-2-.46 0-.9.08-1.32.21l-1.49-1.49C15.13 4.08 15.29 4 15.47 4c2.21 0 4 1.79 4 4 0 1.13-1.64 3.07-3.28 4.81z"/></svg>
+          </ng-template>
+        </span>
+      </div>
+      <button type="submit" [disabled]="isLoading || registerForm.invalid">
+        {{ isLoading ? 'Processing...' : 'Sign Up' }}
+      </button>
+      <div *ngIf="errorMessage && isActive" class="error-message">{{ errorMessage }}</div>
+    </form>
+  </div>
+
+  <div class="form-container sign-in">
+    <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+      <h1><span class="red-accent">Sign In</span></h1>
+      <span>or use your email password</span>
+      <input 
+        type="email" 
+        formControlName="email" 
+        placeholder="Email"
+        [class.invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+      >
+      <div class="input-group">
+        <input 
+          [type]="loginPasswordVisible ? 'text' : 'password'"
+          formControlName="password" 
+          placeholder="Password"
+          [class.invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+        >
+        <span class="eye-icon" (click)="loginPasswordVisible = !loginPasswordVisible">
+          <ng-container *ngIf="loginPasswordVisible; else closedEye2">
+            <!-- open eye SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="#e53935"><path d="M12 6c-5 0-9 4-9 6s4 6 9 6 9-4 9-6-4-6-9-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+          </ng-container>
+          <ng-template #closedEye2>
+            <!-- closed eye SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="#e53935"><path d="M12 6c-5 0-9 4-9 6s4 6 9 6c1.85 0 3.55-.63 4.93-1.69l1.42 1.42C16.36 19.07 14.28 20 12 20c-5 0-9-4-9-6s4-6 9-6c2.28 0 4.36.93 5.93 2.27l-1.42 1.42C15.55 6.63 13.85 6 12 6zm0 10c-2.21 0-4-1.79-4-4 0-.46.08-.9.21-1.32l1.49 1.49c.13.13.29.21.47.21s.34-.08.47-.21l1.49-1.49c.13.13.21.29.21.47 0 1.1-.9 2-2 2zm7.19-2.19l-1.41-1.41C18.36 11.07 20 9.13 20 8c0-1.1-.9-2-2-2-.46 0-.9.08-1.32.21l-1.49-1.49C15.13 4.08 15.29 4 15.47 4c2.21 0 4 1.79 4 4 0 1.13-1.64 3.07-3.28 4.81z"/></svg>
+          </ng-template>
+        </span>
+      </div>
+      <a href="#"><span class="red-accent">Forget Your Password?</span></a>
+      <button type="submit" [disabled]="isLoading || loginForm.invalid">
+        {{ isLoading ? 'Signing In...' : 'Sign In' }}
+      </button>
+      <div *ngIf="errorMessage && !isActive" class="error-message">{{ errorMessage }}</div>
+    </form>
+  </div>
+
+  <div class="toggle-container">
+    <div class="toggle">
+      <div class="toggle-panel toggle-left">
+        <h1>Welcome Back!</h1>
+        <p>Enter your personal details to use all of site features</p>
+        <button class="hidden" (click)="onLoginClick()"><span class="red-accent">Sign In</span></button>
+      </div>
+      <div class="toggle-panel toggle-right">
+        <h1>Hello, Friend!</h1>
+        <p>Register with your personal details to use all of site features</p>
+        <button class="hidden" (click)="onRegisterClick()"><span class="red-accent">Sign Up</span></button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -18,6 +18,7 @@ export const routes: Routes = [
       {
         path: 'user',
         loadComponent: () => import('./user/user.component').then(m => m.UserComponent),
+      
         data: {
           title: 'User'
         }
@@ -27,6 +28,13 @@ export const routes: Routes = [
         loadComponent: () => import('./stat/stat.component').then(m => m.StatComponent),
         data: {
           title: 'Stat'
+        }
+      },
+      {
+        path: 'dash',
+        loadComponent: () => import('./dash/dash.component').then(m => m.DashComponent),
+        data: {
+          title: 'dash'
         }
       }
     ]
