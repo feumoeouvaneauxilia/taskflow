@@ -29,6 +29,13 @@ export const routes: Routes = [
         data: {
           title: 'Stat'
         }
+      },
+      {
+        path: 'dash',
+        loadComponent: () => import('./dash/dash.component').then(m => m.DashComponent),
+        data: {
+          title: 'dash'
+        }
       }
     ]
   }
