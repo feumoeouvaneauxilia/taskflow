@@ -1,75 +1,101 @@
 <c-col xs="12">
-    <c-card class="mb-4">
-      <c-card-header>
-        <strong>Angular Table</strong> <small>Active tables</small>
-      </c-card-header>
-      <c-card-body>
-        <app-docs-example href="components/table#active-tables">
-          <table cTable>
-            <thead>
+  <c-card class="mb-4">
+    <c-card-header>
+      <strong>User Management</strong>
+    </c-card-header>
+    <c-card-body>
+      <div style="overflow-x:auto; max-width:100%;">
+        <table cTable class="table-responsive" style="min-width:900px;">
+          <thead>
             <tr>
-              <th scope="col">#</th>
-              <th scope="col">Class</th>
-              <th scope="col">Heading</th>
-              <th scope="col">Heading</th>
+              <th>#</th>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Created At</th>
+              <th>Last Active</th>
+              <th>Rights Management</th>
             </tr>
-            </thead>
-            <tbody>
-            <tr cTableActive>
-              <th scope="row">1</th>
-              <td>Mark</td>
-              <td>Otto</td>
-              <td>&#64;mdo</td>
-            </tr>
-            <tr>
-              <th scope="row">2</th>
-              <td>Jacob</td>
-              <td>Thornton</td>
-              <td>&#64;fat</td>
-            </tr>
-            <tr>
-              <th scope="row">3</th>
-              <td cTableActive colSpan="2">
-                Larry the Bird
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of users; let i = index">
+              <th scope="row">{{ i + 1 }}</th>
+              <td>{{ user.id }}</td>
+              <td>{{ user.name }}</td>
+              <td>{{ user.email }}</td>
+              <td>{{ user.role }}</td>
+              <td>
+                <c-form-switch
+                  [checked]="user.isActive"
+                  (change)="toggleUserStatus(user.id, user.isActive)"
+                  [html]="user.isActive ? 'Active' : 'Inactive'"
+                ></c-form-switch>
               </td>
-              <td>&#64;twitter</td>
-            </tr>
-            </tbody>
-          </table>
-        </app-docs-example>
-        <app-docs-example href="components/table#active-tables">
-          <table cTable color="dark">
-            <thead>
-            <tr>
-              <th scope="col">#</th>
-              <th scope="col">Class</th>
-              <th scope="col">Heading</th>
-              <th scope="col">Heading</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr cTableActive>
-              <th scope="row">1</th>
-              <td>Mark</td>
-              <td>Otto</td>
-              <td>&#64;mdo</td>
-            </tr>
-            <tr>
-              <th scope="row">2</th>
-              <td>Jacob</td>
-              <td>Thornton</td>
-              <td>&#64;fat</td>
-            </tr>
-            <tr>
-              <th scope="row">3</th>
-              <td cTableActive colSpan="2">
-                Larry the Bird
+              <td>{{ user.createdAt | date:'medium' }}</td>
+              <td>{{ user.lastActive | date:'medium' }}</td>
+              <td>
+                <button class="btn btn-primary btn-sm" (click)="openRightsModal(user)">
+                  Gestion des droits
+                </button>
               </td>
-              <td>&#64;twitter</td>
             </tr>
-            </tbody>
-          </table>
-        </app-docs-example>
-      </c-card-body>
-    </c-card>
-  </c-col>
+            <tr *ngIf="users.length === 0">
+              <td colspan="9" class="text-center">No users found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </c-card-body>
+  </c-card>
+</c-col>
+
+<!-- Rights Management Modal
+<c-modal
+  [visible]="showRightsModal"
+  (visibleChange)="showRightsModal = $event"
+  backdrop="static"
+  size="lg"
+>
+  <c-modal-header>
+    <h5 cModalTitle>Rights Management - {{selectedUser?.name}} (ID: {{selectedUser?.id}})</h5>
+    <button (click)="closeRightsModal()" cModalClose class="btn-close"></button>
+  </c-modal-header>
+  <c-modal-body>
+    <form>
+      <div class="mb-3">
+        <c-form-check
+          id="manageUsers"
+          label="Manage Users"
+          [(ngModel)]="rightsForm.manageUsers"
+          name="manageUsers"
+        ></c-form-check>
+      </div>
+      <div class="mb-3">
+        <c-form-check
+          id="manageTasks"
+          label="Manage Tasks"
+          [(ngModel)]="rightsForm.manageTasks"
+          name="manageTasks"
+        ></c-form-check>
+      </div>
+      <div class="mb-3">
+        <c-form-check
+          id="adminAccess"
+          label="Admin Access"
+          [(ngModel)]="rightsForm.adminAccess"
+          name="adminAccess"
+        ></c-form-check>
+      </div>
+    </form>
+  </c-modal-body>
+  <c-modal-footer>
+    <button (click)="closeRightsModal()" cButton color="secondary">
+      Cancel
+    </button>
+    <button (click)="saveUserRights()" cButton color="primary">
+      Save Changes
+    </button> -->
+  <!-- </c-modal-footer>
+</c-modal> -->
