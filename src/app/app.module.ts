@@ -5,6 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { AppComponent } from './app.component';
 import { DashComponent } from './views/dashboard/dash/dash.component';
 import { SpinnerModule } from '@coreui/angular';
+import { ToastModule } from 'primeng/toast';  // Import ToastModule
+import { MessageService } from 'primeng/api';  // Import MessageService
 
 @NgModule({
   declarations: [
@@ -15,9 +17,10 @@ import { SpinnerModule } from '@coreui/angular';
     BrowserModule,
     HttpClientModule,
     FormsModule,
-    SpinnerModule
+    SpinnerModule,
+    ToastModule  // Add ToastModule here
   ],
-  providers: [],
+  providers: [MessageService], // Add MessageService provider
   bootstrap: [AppComponent]
 })
 export class AppModule { }

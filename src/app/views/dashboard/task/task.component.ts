@@ -32,6 +32,8 @@ import { TaskService } from '../../../services/task/task.service';
 import { UserService } from '../../../services/user/user.service';
 import { AuthService } from '../../../services/auth/auth.service';
 import { CommonModule } from '@angular/common';
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
 
 interface ITaskData {
   id?: string;
@@ -78,8 +80,10 @@ interface ITaskData {
     FormTextDirective,
     IconDirective,
     ReactiveFormsModule,
-    CommonModule
+    CommonModule,
+    ToastModule
   ],
+  providers: [MessageService],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './task.component.html',
   styleUrls: ['./task.component.scss']
@@ -107,7 +111,8 @@ export class TaskComponent implements OnInit {
     private taskService: TaskService, 
     private userService: UserService,
     private fb: FormBuilder,
-    private authService: AuthService
+    private authService: AuthService,
+    private messageService: MessageService
   ) {
     this.createTaskForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
@@ -147,7 +152,7 @@ export class TaskComponent implements OnInit {
         this.isLoading = false;
       },
       error: (error) => {
-        console.error('Error loading tasks:', error);
+        this.messageService.add({severity: 'error', summary: 'Error', detail: 'Failed to load tasks.'});
         this.isLoading = false;
       }
     });
@@ -174,7 +179,7 @@ export class TaskComponent implements OnInit {
         this.availableUsers = Array.isArray(data) ? data : (data?.users || []);
       },
       error: (error) => {
-        console.error('Error loading users:', error);
+        this.messageService.add({severity: 'error', summary: 'Error', detail: 'Failed to load users.'});
       }
     });
   }
@@ -252,10 +257,12 @@ export class TaskComponent implements OnInit {
       next: () => {
         this.closeCreateModal();
         this.loadTasks();
+        this.messageService.add({severity: 'success', summary: 'Success', detail: 'Task created successfully.'});
       },
       error: (error) => {
         console.error('Error creating task:', error);
         this.createErrorMessage = error.message || 'Failed to create task. Please try again.';
+        this.messageService.add({severity: 'error', summary: 'Error', detail: 'Failed to create task.'});
         this.isCreating = false;
       },
       complete: () => {
