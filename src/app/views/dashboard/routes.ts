@@ -38,6 +38,13 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'groupe',
+        loadComponent: () => import('./group/group.component').then(m => m.GroupComponent),
+        data: {
+          title: 'Groupe'
+        }
+      },
+      {
         path: 'logout',
         loadComponent: () => import('./logout/logout.component').then(m => m.LogoutComponent),
         data: {

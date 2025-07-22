@@ -1,0 +1,442 @@
+<c-col xs="12">
+  <c-card class="mb-4">
+    <c-card-header class="d-flex justify-content-between align-items-center">
+      <strong>Group Management</strong>
+      <button 
+        cButton 
+        color="success"
+        size="sm"
+        (click)="openCreateModal()"
+        [disabled]="isLoading"
+        class="d-flex align-items-center"
+      >
+        <svg [cIcon]="icons.cilPlus" size="sm" class="me-1" style="color:#fff"></svg>
+        Create Group
+      </button>
+    </c-card-header>
+    <c-card-body>
+      <div *ngIf="isLoading" class="loading-container">
+        <div class="spinner-wrapper">
+          <c-spinner color="danger" variant="grow"></c-spinner>
+          <p class="loading-text">Loading groups...</p>
+        </div>
+      </div>
+
+      <div *ngIf="!isLoading">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+          <div class="d-flex align-items-center gap-2">
+            <label class="me-2 mb-0">Items per page:</label>
+            <div style="min-width: 90px;">
+              <select 
+                class="form-select form-select-sm"
+                [value]="itemsPerPage"
+                (change)="onItemsPerPageChange($event)"
+                style="width: 100%;"
+              >
+                <option *ngFor="let option of itemsPerPageOptions" [value]="option">
+                  {{ option }}
+                </option>
+              </select>
+            </div>
+          </div>
+          <div class="search-container">
+            <input 
+              type="text" 
+              class="form-control" 
+              placeholder="Search groups..." 
+              [value]="searchTerm"
+              (input)="onSearch($event)"
+              style="width: 250px;"
+            >
+            <svg [cIcon]="icons.cilSearch" size="sm" class="search-icon"></svg>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table cTable [hover]="true" [striped]="true" class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>
+                  <div class="d-inline">
+                    Name
+                    <svg [cIcon]="icons.cilPeople" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+                <th>Description</th>
+                <th>Manager</th>
+                <th>Members</th>
+                <th>Created At</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let group of paginatedGroups; let i = index">
+                <th scope="row">{{ (currentPage - 1) * itemsPerPage + i + 1 }}</th>
+                <td>{{ group.name }}</td>
+                <td>{{ group.description || '-' }}</td>
+                <td>{{ userNames[group.managerId] || group.managerId }}</td>
+                <td>{{ getMemberNames(group.memberIds) }}</td>
+                <td>{{ formatDate(group.createdAt) }}</td>
+                <td>
+                  <div class="d-flex gap-2">
+                    <button 
+                      cButton 
+                      color="primary" 
+                      size="sm"
+                      (click)="openEditModal(group)"
+                      class="d-flex align-items-center"
+                    >
+                      <svg [cIcon]="icons.cilPencil" size="sm" class="me-1"></svg>
+                      Edit
+                    </button>
+                    <button 
+                      cButton 
+                      color="info" 
+                      size="sm"
+                      (click)="openAddMembersModal(group)"
+                      class="d-flex align-items-center"
+                    >
+                      <svg [cIcon]="icons.cilUser" size="sm" class="me-1"></svg>
+                      Add Members
+                    </button>
+                    <button 
+                      cButton 
+                      color="danger" 
+                      size="sm"
+                      (click)="deleteGroup(group.id)"
+                      class="d-flex align-items-center"
+                    >
+                      <svg [cIcon]="icons.cilTrash" size="sm" class="me-1"></svg>
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="paginatedGroups.length === 0 && !isLoading">
+                <td colspan="7" class="text-center">
+                  {{ searchTerm ? 'No groups found matching your search.' : 'No groups found.' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <div class="pagination-info">
+            Showing {{ startItem }} to {{ endItem }} of {{ totalItems }} entries
+            <span *ngIf="searchTerm" class="text-muted">(filtered)</span>
+          </div>
+          
+          <nav *ngIf="totalPages > 1">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item" [class.disabled]="currentPage === 1">
+                <button 
+                  class="page-link" 
+                  (click)="onPageChange(currentPage - 1)"
+                  [disabled]="currentPage === 1"
+                >
+                  Previous
+                </button>
+              </li>
+              
+              <li 
+                class="page-item" 
+                *ngFor="let page of pages" 
+                [class.active]="page === currentPage"
+              >
+                <button 
+                  class="page-link" 
+                  (click)="onPageChange(page)"
+                >
+                  {{ page }}
+                </button>
+              </li>
+              
+              <li class="page-item" [class.disabled]="currentPage === totalPages">
+                <button 
+                  class="page-link" 
+                  (click)="onPageChange(currentPage + 1)"
+                  [disabled]="currentPage === totalPages"
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </c-card-body>
+  </c-card>
+</c-col>
+
+<!-- Create Group Modal -->
+<c-modal 
+  [visible]="showCreateModal" 
+  (visibleChange)="showCreateModal = $event"
+  backdrop="static"
+  size="lg"
+>
+  <c-modal-header>
+    <h4 cModalTitle>Create New Group</h4>
+    <button 
+      cButtonClose 
+      (click)="closeCreateModal()"
+      aria-label="Close"
+    ></button>
+  </c-modal-header>
+  
+  <c-modal-body>
+    <form cForm [formGroup]="createGroupForm" (ngSubmit)="createGroup()">
+      <c-row>
+        <c-col md="12" class="mb-3">
+          <label cFormLabel for="groupName">Group Name *</label>
+          <input 
+            cFormControl
+            type="text"
+            id="groupName"
+            formControlName="name"
+            placeholder="Enter group name"
+            [class.is-invalid]="createGroupForm.get('name')?.invalid && createGroupForm.get('name')?.touched"
+          >
+          <div 
+            class="invalid-feedback"
+            *ngIf="createGroupForm.get('name')?.invalid && createGroupForm.get('name')?.touched"
+          >
+            Group name is required (minimum 3 characters)
+          </div>
+        </c-col>
+        
+        <c-col md="12" class="mb-3">
+          <label cFormLabel for="groupDescription">Description</label>
+          <textarea 
+            cFormControl
+            id="groupDescription"
+            formControlName="description"
+            rows="2"
+            placeholder="Enter group description"
+          ></textarea>
+        </c-col>
+        
+        <c-col md="12" class="mb-3">
+          <label cFormLabel for="managerId">Manager *</label>
+          <select
+            cFormSelect
+            id="managerId"
+            formControlName="managerId"
+            [class.is-invalid]="createGroupForm.get('managerId')?.invalid && createGroupForm.get('managerId')?.touched"
+          >
+            <option value="" disabled>Select a manager</option>
+            <option *ngFor="let user of availableUsers" [value]="user.id">
+              {{ user.username }} ({{ user.email }})
+            </option>
+          </select>
+          <div 
+            class="invalid-feedback"
+            *ngIf="createGroupForm.get('managerId')?.invalid && createGroupForm.get('managerId')?.touched"
+          >
+            Manager is required
+          </div>
+        </c-col>
+      </c-row>
+      
+      <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+        {{ errorMessage }}
+      </div>
+    </form>
+  </c-modal-body>
+  
+  <c-modal-footer>
+    <button 
+      cButton 
+      color="danger" 
+      size="sm"
+      (click)="closeCreateModal()"
+      [disabled]="isCreating"
+    >
+      Cancel
+    </button>
+    <button 
+      cButton 
+      color="success" 
+      size="sm"
+      (click)="createGroup()"
+      [disabled]="isCreating || createGroupForm.invalid"
+      class="d-flex align-items-center"
+    >
+      <svg [cIcon]="icons.cilPlus" size="sm" class="me-1" style="color:#fff"></svg>
+      <c-spinner *ngIf="isCreating" size="sm" class="me-1"></c-spinner>
+      {{ isCreating ? 'Creating...' : 'Create Group' }}
+    </button>
+  </c-modal-footer>
+</c-modal>
+
+<!-- Edit Group Modal -->
+<c-modal 
+  [visible]="showEditModal" 
+  (visibleChange)="showEditModal = $event"
+  backdrop="static"
+  size="lg"
+>
+  <c-modal-header>
+    <h4 cModalTitle>Edit Group</h4>
+    <button 
+      cButtonClose 
+      (click)="closeEditModal()"
+      aria-label="Close"
+    ></button>
+  </c-modal-header>
+  
+  <c-modal-body>
+    <form cForm [formGroup]="editGroupForm" (ngSubmit)="updateGroup()">
+      <c-row>
+        <c-col md="12" class="mb-3">
+          <label cFormLabel for="editGroupName">Group Name *</label>
+          <input 
+            cFormControl
+            type="text"
+            id="editGroupName"
+            formControlName="name"
+            placeholder="Enter group name"
+            [class.is-invalid]="editGroupForm.get('name')?.invalid && editGroupForm.get('name')?.touched"
+          >
+          <div 
+            class="invalid-feedback"
+            *ngIf="editGroupForm.get('name')?.invalid && editGroupForm.get('name')?.touched"
+          >
+            Group name is required (minimum 3 characters)
+          </div>
+        </c-col>
+        
+        <c-col md="12" class="mb-3">
+          <label cFormLabel for="editGroupDescription">Description</label>
+          <textarea 
+            cFormControl
+            id="editGroupDescription"
+            formControlName="description"
+            rows="2"
+            placeholder="Enter group description"
+          ></textarea>
+        </c-col>
+        
+        <c-col md="12" class="mb-3">
+          <label cFormLabel for="editManagerId">Manager *</label>
+          <select
+            cFormSelect
+            id="editManagerId"
+            formControlName="managerId"
+            [class.is-invalid]="editGroupForm.get('managerId')?.invalid && editGroupForm.get('managerId')?.touched"
+          >
+            <option value="" disabled>Select a manager</option>
+            <option *ngFor="let user of availableUsers" [value]="user.id">
+              {{ user.username }} ({{ user.email }})
+            </option>
+          </select>
+          <div 
+            class="invalid-feedback"
+            *ngIf="editGroupForm.get('managerId')?.invalid && editGroupForm.get('managerId')?.touched"
+          >
+            Manager is required
+          </div>
+        </c-col>
+      </c-row>
+      
+      <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+        {{ errorMessage }}
+      </div>
+    </form>
+  </c-modal-body>
+  
+  <c-modal-footer>
+    <button 
+      cButton 
+      color="danger" 
+      size="sm"
+      (click)="closeEditModal()"
+      [disabled]="isUpdating"
+    >
+      Cancel
+    </button>
+    <button 
+      cButton 
+      color="success" 
+      size="sm"
+      (click)="updateGroup()"
+      [disabled]="isUpdating || editGroupForm.invalid"
+      class="d-flex align-items-center"
+    >
+      <svg [cIcon]="icons.cilPencil" size="sm" class="me-1" style="color:#fff"></svg>
+      <c-spinner *ngIf="isUpdating" size="sm" class="me-1"></c-spinner>
+      {{ isUpdating ? 'Updating...' : 'Update Group' }}
+    </button>
+  </c-modal-footer>
+</c-modal>
+
+<!-- Add Members Modal -->
+<c-modal 
+  [visible]="showAddMembersModal" 
+  (visibleChange)="showAddMembersModal = $event"
+  backdrop="static"
+  size="lg"
+>
+  <c-modal-header>
+    <h4 cModalTitle>Add Members to Group</h4>
+    <button 
+      cButtonClose 
+      (click)="closeAddMembersModal()"
+      aria-label="Close"
+    ></button>
+  </c-modal-header>
+  
+  <c-modal-body>
+    <form cForm [formGroup]="addMembersForm" (ngSubmit)="addMembers()">
+      <c-row>
+        <c-col md="12" class="mb-3">
+          <label cFormLabel for="members">Select Members</label>
+          <select
+            cFormSelect
+            id="members"
+            multiple
+            size="5"
+            (change)="onMembersSelect($event)"
+          >
+            <option *ngFor="let user of availableUsers" [value]="user.id">
+              {{ user.username }} ({{ user.email }})
+            </option>
+          </select>
+          <small class="form-text text-muted">
+            Hold Ctrl (Cmd on Mac) to select multiple users
+          </small>
+        </c-col>
+      </c-row>
+      
+      <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+        {{ errorMessage }}
+      </div>
+    </form>
+  </c-modal-body>
+  
+  <c-modal-footer>
+    <button 
+      cButton 
+      color="danger" 
+      size="sm"
+      (click)="closeAddMembersModal()"
+      [disabled]="isAddingMembers"
+    >
+      Cancel
+    </button>
+    <button 
+      cButton 
+      color="success" 
+      size="sm"
+      (click)="addMembers()"
+      [disabled]="isAddingMembers || addMembersForm.invalid"
+      class="d-flex align-items-center"
+    >
+      <svg [cIcon]="icons.cilUser" size="sm" class="me-1" style="color:#fff"></svg>
+      <c-spinner *ngIf="isAddingMembers" size="sm" class="me-1"></c-spinner>
+      {{ isAddingMembers ? 'Adding...' : 'Add Members' }}
+    </button>
+  </c-modal-footer>
+</c-modal>

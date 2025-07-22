@@ -32,12 +32,12 @@ export const navItems: INavData[] = [
       url: '/dashboard/stat',
       iconComponent: { name: 'cil-chart' },
   },
-  
-//   {
-//        name: 'settings',
-//       url: '/dashboard/logout',
-//       iconComponent: { name: 'cil-settings' },
-//   },
+  {
+      name: 'Group Management',
+      url: '/dashboard/groupe',
+      iconComponent: { name: 'cil-group' },
+  },
+
   {
        name: 'Logout',
       url: '/dashboard/logout',
