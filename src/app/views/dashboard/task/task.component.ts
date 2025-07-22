@@ -2,7 +2,7 @@ import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { 
   AlignDirective, 
-  BorderDirective, 
+  BorderDirective,
   CardBodyComponent, 
   CardComponent, 
   CardHeaderComponent, 

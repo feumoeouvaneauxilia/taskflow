@@ -34,8 +34,8 @@ export const navItems: INavData[] = [
   },
   {
       name: 'Group Management',
-      url: '/dashboard/groupe',
-      iconComponent: { name: 'cil-group' },
+      url: '/dashboard/groups',
+      iconComponent: { name: 'cil-people' },
   },
 
   {
