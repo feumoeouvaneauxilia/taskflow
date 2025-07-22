@@ -39,7 +39,7 @@ export const routes: Routes = [
       },
       {
         path: 'groupe',
-        loadComponent: () => import('./groupe/groupe.component').then(m => m.GroupeComponent),
+        loadComponent: () => import('./group/group.component').then(m => m.GroupComponent),
         data: {
           title: 'Groupe'
         }
