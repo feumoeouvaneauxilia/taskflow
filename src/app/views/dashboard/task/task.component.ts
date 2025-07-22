@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { 
   AlignDirective, 
   BorderDirective, 
@@ -26,13 +26,12 @@ import {
   FormSelectDirective,
   FormTextDirective
 } from '@coreui/angular';
-import { ReactiveFormsModule } from '@angular/forms';
 import { IconDirective } from '@coreui/icons-angular';
 import { cilCalendar, cilUser, cilTask, cilCheckCircle, cilClock } from '@coreui/icons';
 import { TaskService } from '../../../services/task/task.service';
 import { UserService } from '../../../services/user/user.service';
+import { AuthService } from '../../../services/auth/auth.service';
 import { CommonModule } from '@angular/common';
-import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 
 interface ITaskData {
   id?: string;
@@ -81,9 +80,9 @@ interface ITaskData {
     ReactiveFormsModule,
     CommonModule
   ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './task.component.html',
-  styleUrls: ['./task.component.scss'],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA]
+  styleUrls: ['./task.component.scss']
 })
 export class TaskComponent implements OnInit {
   tasks: any[] = [];
@@ -107,7 +106,8 @@ export class TaskComponent implements OnInit {
   constructor(
     private taskService: TaskService, 
     private userService: UserService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private authService: AuthService
   ) {
     this.createTaskForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
@@ -225,15 +225,29 @@ export class TaskComponent implements OnInit {
     }
     this.isCreating = true;
     this.createErrorMessage = '';
+
+    const currentUser = this.authService.getCurrentUser();
+    const userId = currentUser?.id;
+    const roles = currentUser?.roles?.map((r: string) => r.toLowerCase()) || [];
+
     const formValue = this.createTaskForm.value;
-    const taskData = {
+    const taskData: any = {
       name: formValue.name,
       description: formValue.description,
       startAt: formValue.startAt || null,
       dueAt: formValue.dueAt || null,
       assignedUserIds: formValue.assignedUserIds || [],
-      assignedGroupIds: []
+      assignedGroupIds: [],
+      createdById: userId,
+      assignedById: userId
     };
+
+    if (roles.includes('admin') || roles.includes('role_admin')) {
+      taskData.isValidated = true;
+    } else if (roles.length > 0) {
+      taskData.isValidated = false;
+    }
+
     this.taskService.createTask(taskData).subscribe({
       next: () => {
         this.closeCreateModal();
@@ -282,7 +296,9 @@ export class TaskComponent implements OnInit {
 
   get pages(): number[] {
     const pages: number[] = [];
-    for (let i = 1; i <= this.totalPages; i++) pages.push(i);
+    for (let i = 1; i <= this.totalPages; i++) {
+      pages.push(i);
+    }
     return pages;
   }
 
@@ -314,7 +330,9 @@ export class TaskComponent implements OnInit {
   }
 
   formatDate(dateString: string): string {
-    if (!dateString) return '-';
+    if (!dateString) {
+      return '-';
+    }
     return new Date(dateString).toLocaleDateString();
   }
 }
