@@ -24,7 +24,7 @@ import {
 } from '@coreui/angular';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { IconDirective } from '@coreui/icons-angular';
-import { cilPeople, cilUser, cilPlus, cilTrash, cilPencil, cilSearch } from '@coreui/icons';
+import { cilPeople, cilUser, cilPlus, cilTrash, cilPencil, cilSearch, cilAlignLeft, cilGroup, cilCalendar, cilSettings } from '@coreui/icons';
 import { GroupService, Group, CreateGroupDto, UpdateGroupDto, AddMembersDto } from '../../../services/group/group.service';
 import { UserService } from '../../../services/user/user.service';
 import { CommonModule } from '@angular/common';
@@ -74,7 +74,7 @@ export class GroupComponent implements OnInit {
   totalItems = 0;
   searchTerm = '';
   itemsPerPageOptions = [5, 10, 25, 50];
-  icons = { cilPeople, cilUser, cilPlus, cilTrash, cilPencil, cilSearch };
+  icons = { cilPeople, cilUser, cilPlus, cilTrash, cilPencil, cilSearch, cilAlignLeft , cilCalendar, cilGroup, cilSettings};
   
   showCreateModal = false;
   showEditModal = false;

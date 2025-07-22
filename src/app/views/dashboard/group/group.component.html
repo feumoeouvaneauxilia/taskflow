@@ -55,21 +55,46 @@
         <div class="table-responsive">
           <table cTable [hover]="true" [striped]="true" class="table">
             <thead>
-              <tr>
-                <th>#</th>
-                <th>
-                  <div class="d-inline">
-                    Name
-                    <svg [cIcon]="icons.cilPeople" size="sm" class="ms-1 text-danger"></svg>
-                  </div>
-                </th>
-                <th>Description</th>
-                <th>Manager</th>
-                <th>Members</th>
-                <th>Created At</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+  <tr>
+    <th>#</th>
+    <th class="black-header">
+      <div class="d-flex align-items-center">
+        <span>Name</span>
+        <svg [cIcon]="icons.cilPeople" size="sm" class="ms-1 text-danger"></svg>
+      </div>
+    </th>
+    <th class="black-header">
+      <div class="d-flex align-items-center">
+        <span>Description</span>
+        <svg [cIcon]="icons.cilAlignLeft" size="sm" class="ms-1 text-danger"></svg>
+      </div>
+    </th>
+    <th class="black-header">
+      <div class="d-flex align-items-center">
+        <span>Manager</span>
+        <svg [cIcon]="icons.cilUser" size="sm" class="ms-1 text-danger"></svg>
+      </div>
+    </th>
+    <th class="black-header">
+      <div class="d-flex align-items-center">
+        <span>Members</span>
+        <svg [cIcon]="icons.cilGroup" size="sm" class="ms-1 text-danger"></svg>
+      </div>
+    </th>
+    <th class="black-header">
+      <div class="d-flex align-items-center">
+        <span>Created At</span>
+        <svg [cIcon]="icons.cilCalendar" size="sm" class="ms-1 text-danger"></svg>
+      </div>
+    </th>
+    <th class="black-header">
+      <div class="d-flex align-items-center">
+        <span>Actions</span>
+        <svg [cIcon]="icons.cilSettings" size="sm" class="ms-1 text-danger"></svg>
+      </div>
+    </th>
+  </tr>
+</thead>
             <tbody>
               <tr *ngFor="let group of paginatedGroups; let i = index">
                 <th scope="row">{{ (currentPage - 1) * itemsPerPage + i + 1 }}</th>

@@ -109,3 +109,35 @@
     font-size: 14px;
   }
 }
+.black-header {
+  background-color: #232323 !important;  // Couleur noir
+  color: white !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  
+  svg {
+    color: #e53935 !important;  // Couleur rouge
+  }
+}
+
+// Pour améliorer l'apparence du tableau
+table {
+  thead tr {
+    th {
+      vertical-align: middle;
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      
+      .d-flex {
+        justify-content: center;
+      }
+    }
+  }
+  
+  tbody tr {
+    td {
+      vertical-align: middle;
+    }
+  }
+}
