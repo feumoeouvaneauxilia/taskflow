@@ -9,7 +9,7 @@ export const navItems: INavData[] = [
   
   // },
   {
-       name: 'Dashboard',
+       name: 'Session',
       url: '/dashboard/dash',
       iconComponent: { name: 'cil-speedometer' },
 
