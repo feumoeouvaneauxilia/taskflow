@@ -50,13 +50,13 @@
         textColor="primary"
         alt="User avatar"
       >
-        {{ userName ? userName.charAt(0).toUpperCase() : '?' }}
+        {{ getUserInitials() }}
       </c-avatar>
     </button>
     <ul cDropdownMenu class="pt-0 w-auto">
       <li>
         <h6 cDropdownHeader class="bg-body-secondary text-body-secondary fw-semibold py-2 rounded-top">
-          Account
+          Account - {{ userName || 'User' }}
         </h6>
       </li>
       <li>

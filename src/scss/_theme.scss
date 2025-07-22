@@ -87,3 +87,190 @@ body {
     --cui-footer-bg: var(--cui-body-bg);
   }
 }
+
+/* Mobile responsive utilities */
+@media (max-width: 768px) {
+  .container-fluid {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+  
+  /* Mobile sidebar management */
+  .sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 280px !important; // Reduced width for mobile
+    z-index: 1050;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .sidebar.show {
+    transform: translateX(0);
+  }
+  
+  /* Remove sidebar padding from wrapper on mobile */
+  .wrapper {
+    padding-inline-start: 0 !important;
+    padding-inline-end: 0 !important;
+  }
+  
+  /* Add overlay when sidebar is open */
+  .sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+  }
+  
+  .sidebar-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  /* Responsive card spacing */
+  c-card {
+    margin-bottom: 1rem;
+  }
+  
+  /* Responsive form controls */
+  .form-control, .form-select {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  /* Better touch targets */
+  .btn, .page-link, c-badge[style*="cursor: pointer"] {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Mobile header adjustments */
+  .header {
+    position: relative;
+    z-index: 1030;
+  }
+  
+  /* Sidebar header on mobile */
+  .sidebar-header {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Sidebar navigation on mobile */
+  .sidebar .nav-link {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+  }
+  
+  /* Hide sidebar toggler text on very small screens */
+  .sidebar-toggler-text {
+    display: none;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Small mobile devices - even smaller sidebar */
+  .sidebar {
+    width: 260px !important;
+  }
+  
+  /* Smaller padding for sidebar items */
+  .sidebar .nav-link {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .sidebar-header {
+    padding: 0.75rem;
+  }
+  
+  /* Hide sidebar brand text on very small screens */
+  .sidebar-brand-full {
+    display: none;
+  }
+  
+  .sidebar-brand-minimized {
+    display: block !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra small devices */
+  body {
+    font-size: 14px;
+  }
+  
+  .sidebar {
+    width: 240px !important;
+  }
+  
+  /* Even more compact sidebar */
+  .sidebar .nav-link {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  /* Responsive headers */
+  c-card-header {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+  
+  /* Better spacing for small screens */
+  .mb-3 {
+    margin-bottom: 1rem !important;
+  }
+  
+  .mt-3 {
+    margin-top: 1rem !important;
+  }
+  
+  /* Mobile header button styling */
+  .header .btn {
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 320px) {
+  /* Very small devices */
+  .sidebar {
+    width: 220px !important;
+  }
+  
+  /* Ultra compact sidebar */
+  .sidebar .nav-link {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .sidebar-header {
+    padding: 0.5rem;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (max-height: 500px) and (orientation: landscape) {
+  .sidebar {
+    width: 200px !important;
+  }
+  
+  .sidebar .nav-link {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  .sidebar-header {
+    padding: 0.5rem 1rem;
+  }
+}

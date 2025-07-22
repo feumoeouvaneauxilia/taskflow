@@ -1,52 +1,297 @@
 <c-col xs="12">
   <c-card class="mb-4">
-    <c-card-header>
-      <strong>Task Table</strong>
+    <c-card-header class="d-flex justify-content-between align-items-center">
+      <strong>Task Management</strong>
+      <button 
+        cButton 
+        color="success"
+        size="sm"
+        (click)="openCreateModal()"
+        [disabled]="isLoading"
+        class="d-flex align-items-center"
+      >
+        <svg [cIcon]="icons.cilTask" size="sm" class="me-1" style="color:#fff"></svg>
+        Create Task
+      </button>
     </c-card-header>
     <c-card-body>
-      <div style="overflow-x:auto; max-width:100%;">
-        <table cTable class="table-responsive" style="min-width:900px;">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>Description</th>
-              <th>Status</th>
-              <th>Start At</th>
-              <th>Due At</th>
-              <th>Completed At</th>
-              <th>Assigned Users</th>
-              <th>Assigned By</th>
-              <th>Created By</th>
-              <th>Validated</th>
-              <th>Admin Complete</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let task of tasks; let i = index">
-              <th scope="row">{{ i + 1 }}</th>
-              <td>{{ task.name }}</td>
-              <td>{{ task.description }}</td>
-              <td>{{ task.status }}</td>
-              <td>{{ task.startAt }}</td>
-              <td>{{ task.dueAt }}</td>
-              <td>{{ task.completedAt }}</td>
-              <td>
-                <span *ngFor="let userId of task.assignedUserIds; let last = last">
-                  {{ userId }}<span *ngIf="!last">, </span>
-                </span>
-              </td>
-              <td>{{ userNames[task.assignedById] || task.assignedById }}</td>
-              <td>{{ userNames[task.createdById] || task.createdById }}</td>
-              <td>{{ task.isValidated ? 'Yes' : 'No' }}</td>
-              <td>{{ task.adminComplete ? 'Yes' : 'No' }}</td>
-            </tr>
-            <tr *ngIf="tasks.length === 0">
-              <td colspan="12" class="text-center">No tasks found.</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Loading Spinner -->
+      <div *ngIf="isLoading" class="loading-container">
+        <div class="spinner-wrapper">
+          <c-spinner color="danger" variant="grow"></c-spinner>
+          <p class="loading-text">Loading tasks...</p>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div *ngIf="!isLoading">
+        <!-- Search and Items per page controls -->
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+          <div class="d-flex align-items-center gap-2">
+            <label class="me-2 mb-0">Items per page:</label>
+            <div style="min-width: 90px;">
+              <select 
+                class="form-select form-select-sm"
+                [value]="itemsPerPage"
+                (change)="onItemsPerPageChange($event)"
+                style="width: 100%;"
+              >
+                <option *ngFor="let option of itemsPerPageOptions" [value]="option">
+                  {{ option }}
+                </option>
+              </select>
+            </div>
+          </div>
+          <div class="search-container">
+            <input 
+              type="text" 
+              class="form-control" 
+              placeholder="Search tasks..." 
+              [value]="searchTerm"
+              (input)="onSearch($event)"
+              style="width: 250px;"
+            >
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive">
+          <table cTable [hover]="true" [striped]="true" class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>
+                  <div class="d-inline">
+                    Name
+                    <svg [cIcon]="icons.cilTask" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-inline">
+                    Status
+                    <svg [cIcon]="icons.cilCheckCircle" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-inline">
+                    Start Date
+                    <svg [cIcon]="icons.cilCalendar" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-inline">
+                    Due Date
+                    <svg [cIcon]="icons.cilClock" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+                <th>Assigned By</th>
+                <th>Created By</th>
+                <th>Validated</th>
+                <th>Admin Complete</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let task of paginatedTasks; let i = index">
+                <th scope="row">{{ (currentPage - 1) * itemsPerPage + i + 1 }}</th>
+                <td>{{ task.name }}</td>
+                <td>
+                  <c-badge [color]="getStatusBadgeColor(task.status!)">
+                    {{ task.status }}
+                  </c-badge>
+                </td>
+                <td>{{ formatDate(task.startAt!) }}</td>
+                <td>{{ formatDate(task.dueAt!) }}</td>
+                <td>{{ userNames[task.assignedById!] || task.assignedById }}</td>
+                <td>{{ userNames[task.createdById!] || task.createdById }}</td>
+                <td>
+                  <c-badge [color]="task.isValidated ? 'success' : 'danger'">
+                    {{ task.isValidated ? 'Yes' : 'No' }}
+                  </c-badge>
+                </td>
+                <td>
+                  <c-badge [color]="task.adminComplete ? 'success' : 'danger'">
+                    {{ task.adminComplete ? 'Yes' : 'No' }}
+                  </c-badge>
+                </td>
+              </tr>
+              <tr *ngIf="paginatedTasks.length === 0 && !isLoading">
+                <td colspan="9" class="text-center">
+                  {{ searchTerm ? 'No tasks found matching your search.' : 'No tasks found.' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination and Info -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <div class="pagination-info">
+            Showing {{ startItem }} to {{ endItem }} of {{ totalItems }} entries
+            <span *ngIf="searchTerm" class="text-muted">(filtered)</span>
+          </div>
+          
+          <nav *ngIf="totalPages > 1">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item" [class.disabled]="currentPage === 1">
+                <button 
+                  class="page-link" 
+                  (click)="onPageChange(currentPage - 1)"
+                  [disabled]="currentPage === 1"
+                >
+                  Previous
+                </button>
+              </li>
+              
+              <li 
+                class="page-item" 
+                *ngFor="let page of pages" 
+                [class.active]="page === currentPage"
+              >
+                <button 
+                  class="page-link" 
+                  (click)="onPageChange(page)"
+                >
+                  {{ page }}
+                </button>
+              </li>
+              
+              <li class="page-item" [class.disabled]="currentPage === totalPages">
+                <button 
+                  class="page-link" 
+                  (click)="onPageChange(currentPage + 1)"
+                  [disabled]="currentPage === totalPages"
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
       </div>
     </c-card-body>
   </c-card>
 </c-col>
+
+<!-- Create Task Modal -->
+<c-modal 
+  [visible]="showCreateModal" 
+  (visibleChange)="showCreateModal = $event"
+  backdrop="static"
+  size="lg"
+>
+  <c-modal-header>
+    <h4 cModalTitle>Create New Task</h4>
+    <button 
+      cButtonClose 
+      (click)="closeCreateModal()"
+      aria-label="Close"
+    ></button>
+  </c-modal-header>
+  
+  <c-modal-body>
+    <form cForm [formGroup]="createTaskForm" (ngSubmit)="createTask()">
+      <c-row>
+        <c-col md="12" class="mb-3">
+          <label cFormLabel for="taskName">Task Name *</label>
+          <input 
+            cFormControl
+            type="text"
+            id="taskName"
+            formControlName="name"
+            placeholder="Enter task name"
+            [class.is-invalid]="createTaskForm.get('name')?.invalid && createTaskForm.get('name')?.touched"
+          >
+          <div 
+            class="invalid-feedback"
+            *ngIf="createTaskForm.get('name')?.invalid && createTaskForm.get('name')?.touched"
+          >
+            Task name is required (minimum 3 characters)
+          </div>
+        </c-col>
+        
+        <c-col md="12" class="mb-3">
+          <label cFormLabel for="taskDescription">Description</label>
+          <textarea 
+            cFormControl
+            id="taskDescription"
+            formControlName="description"
+            rows="2"
+            placeholder="Enter task description"
+          ></textarea>
+        </c-col>
+        
+        <c-col md="6" class="mb-3">
+          <label cFormLabel for="startAt">Start Date</label>
+          <input 
+            cFormControl
+            type="datetime-local"
+            id="startAt"
+            formControlName="startAt"
+          >
+        </c-col>
+        
+        <c-col md="6" class="mb-3">
+          <label cFormLabel for="dueAt">Due Date</label>
+          <input 
+            cFormControl
+            type="datetime-local"
+            id="dueAt"
+            formControlName="dueAt"
+          >
+        </c-col>
+        
+        <c-col md="12" class="mb-3">
+          <c-row class="align-items-center">
+            <c-col md="3">
+              <label cFormLabel for="assignedUsers">Assign By User</label>
+            </c-col>
+            <c-col md="9">
+              <select
+                cFormSelect
+                id="assignedUsers"
+                multiple
+                size="3"
+                (change)="onUserSelectionChange($event)"
+              >
+                <option *ngFor="let user of availableUsers" [value]="user.id">
+                  {{ user.username }} ({{ user.email }})
+                </option>
+              </select>
+              <small class="form-text text-muted">
+                Hold Ctrl (Cmd on Mac) to select multiple users
+              </small>
+            </c-col>
+          </c-row>
+        </c-col>
+      </c-row>
+      
+      <div *ngIf="createErrorMessage" class="alert alert-danger" role="alert">
+        {{ createErrorMessage }}
+      </div>
+    </form>
+  </c-modal-body>
+  
+  <c-modal-footer>
+    <button 
+      cButton 
+      color="danger" 
+      size="sm"
+      (click)="closeCreateModal()"
+      [disabled]="isCreating"
+    >
+      Cancel
+    </button>
+    <button 
+      cButton 
+      color="success" 
+      size="sm"
+      (click)="createTask()"
+      [disabled]="isCreating || createTaskForm.invalid"
+      class="d-flex align-items-center"
+    >
+      <svg [cIcon]="icons.cilTask" size="sm" class="me-1" style="color:#fff"></svg>
+      <c-spinner *ngIf="isCreating" size="sm" class="me-1"></c-spinner>
+      {{ isCreating ? 'Creating...' : 'Create Task' }}
+    </button>
+  </c-modal-footer>
+</c-modal>

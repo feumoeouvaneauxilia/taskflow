@@ -23,6 +23,7 @@ import {
 } from '@coreui/angular';
 
 import { IconDirective } from '@coreui/icons-angular';
+import { AuthService } from '../../../services/auth/auth.service';
 
 @Component({
   selector: 'app-default-header',
@@ -45,18 +46,25 @@ export class DefaultHeaderComponent extends HeaderComponent {
     return this.colorModes.find(mode => mode.name === currentMode)?.icon ?? 'cilSun';
   });
 
-  constructor() {
+  constructor(
+    private authService: AuthService
+  ) {
     super();
-    // Example: get user name from localStorage (adapt as needed)
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        this.userName = user.name || '';
-      } catch {
-        this.userName = '';
-      }
+    this.loadUserName();
+  }
+
+  private loadUserName(): void {
+    this.userName = this.authService.getUsername();
+  }
+
+  getUserInitials(): string {
+    if (!this.userName) {
+      return '??';
     }
+    
+    // Get first two letters and convert to uppercase
+    const initials = this.userName.substring(0, 2).toUpperCase();
+    return initials;
   }
 
   sidebarId = input('sidebar1');
@@ -137,6 +145,6 @@ export class DefaultHeaderComponent extends HeaderComponent {
   ];
 
   user = { name: 'User' }; // Replace with actual user fetching logic
-  userName: string = '';
+  userName: string | null = null;
 
 }

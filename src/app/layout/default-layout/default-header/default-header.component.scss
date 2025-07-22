@@ -1,0 +1,63 @@
+c-avatar {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+// Ensure proper text alignment in avatar
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile header responsiveness */
+@media (max-width: 768px) {
+  .header-nav {
+    gap: 0.5rem;
+  }
+  
+  /* Make header toggles more touch-friendly */
+  button[cHeaderToggler] {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Responsive dropdown positioning */
+  c-dropdown[variant="nav-item"] {
+    position: static;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Hide some header elements on very small screens */
+  .d-none.d-md-flex {
+    display: none !important;
+  }
+  
+  /* Smaller avatar on mobile */
+  c-avatar {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Ultra compact header */
+  .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  /* Smaller header elements */
+  button[cHeaderToggler] {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  
+  c-avatar {
+    font-size: 11px;
+  }
+}

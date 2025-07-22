@@ -4,208 +4,153 @@
       <strong>User Management</strong>
     </c-card-header>
     <c-card-body>
-      <div style="overflow-x:auto; max-width:100%;">
-        <table cTable class="table-responsive" style="min-width:600px;">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Username</th>
-              <th>Email</th>
-              <th>Roles</th>
-              <th>Active</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let user of users; let i = index">
-              <th scope="row">{{ i + 1 }}</th>
-              <td>{{ user.username }}</td>
-              <td>{{ user.email }}</td>
-              <!-- <td>{{ formatRoles(user.roles) }}</td> -->
-              <td>
-                <c-form-switch
-                  [checked]="user.isActive"
-                  (change)="toggleUserStatus(user.id, user.isActive)"
-                  [html]="user.isActive ? 'Yes' : 'No'"
-                ></c-form-switch>
-              </td>
-              <td>
-                <!-- <button class="btn btn-primary btn-sm" (click)="openRightsModal(user)">
-                  Manage Rights
-                </button> -->
-              </td>
-            </tr>
-            <tr *ngIf="users.length === 0">
-              <td colspan="6" class="text-center">No users found.</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Loading Spinner -->
+      <div *ngIf="isLoading" class="loading-container">
+        <div class="spinner-wrapper">
+          <c-spinner color="danger" variant="grow"></c-spinner>
+          <p class="loading-text">Loading users...</p>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div *ngIf="!isLoading">
+        <!-- Search and Items per page controls -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex align-items-center">
+            <label class="me-2">Items per page:</label>
+            <select 
+              class="form-select form-select-sm" 
+              style="width: auto;"
+              [value]="itemsPerPage"
+              (change)="onItemsPerPageChange($event)"
+            >
+              <option *ngFor="let option of itemsPerPageOptions" [value]="option">
+                {{ option }}
+              </option>
+            </select>
+          </div>
+          <div class="search-container">
+            <input 
+              type="text" 
+              class="form-control" 
+              placeholder="Search users..." 
+              [value]="searchTerm"
+              (input)="onSearch($event)"
+              style="width: 250px;"
+            >
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive">
+          <table cTable [hover]="true" [striped]="true" class="table">
+            <thead>
+              <tr>
+                <th>
+                  <div class="d-inline">
+                    Username
+                    <svg [cIcon]="icons.cilUser" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-inline">
+                    Email
+                    <svg [cIcon]="icons.cilEnvelopeOpen" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-inline">
+                    Roles
+                    <svg [cIcon]="icons.cilBadge" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-inline">
+                    Status
+                    <svg [cIcon]="icons.cilToggleOn" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of paginatedUsers">
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>
+                  <div class="d-flex flex-wrap gap-1">
+                    <c-badge 
+                      *ngFor="let role of user.roles" 
+                      [color]="getRoleBadgeColor(role)"
+                      class="role-badge"
+                    >
+                      {{ formatRoleName(role) }}
+                    </c-badge>
+                  </div>
+                </td>
+                <td>
+                  <c-badge 
+                    [color]="user.isActive ? 'success' : 'danger'"
+                    (click)="toggleUserStatus(user.id!, user.isActive!)"
+                    style="cursor: pointer;"
+                  >
+                    {{ user.isActive ? 'Active' : 'Inactive' }}
+                  </c-badge>
+                </td>
+              </tr>
+              <tr *ngIf="paginatedUsers.length === 0 && !isLoading">
+                <td colspan="4" class="text-center">
+                  {{ searchTerm ? 'No users found matching your search.' : 'No users found.' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination and Info -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <div class="pagination-info">
+            Showing {{ startItem }} to {{ endItem }} of {{ totalItems }} entries
+            <span *ngIf="searchTerm" class="text-muted">(filtered)</span>
+          </div>
+          
+          <nav *ngIf="totalPages > 1">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item" [class.disabled]="currentPage === 1">
+                <button 
+                  class="page-link" 
+                  (click)="onPageChange(currentPage - 1)"
+                  [disabled]="currentPage === 1"
+                >
+                  Previous
+                </button>
+              </li>
+              
+              <li 
+                class="page-item" 
+                *ngFor="let page of pages" 
+                [class.active]="page === currentPage"
+              >
+                <button 
+                  class="page-link" 
+                  (click)="onPageChange(page)"
+                >
+                  {{ page }}
+                </button>
+              </li>
+              
+              <li class="page-item" [class.disabled]="currentPage === totalPages">
+                <button 
+                  class="page-link" 
+                  (click)="onPageChange(currentPage + 1)"
+                  [disabled]="currentPage === totalPages"
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
       </div>
     </c-card-body>
   </c-card>
 </c-col>
-
-<!-- Rights Management Modal
-<c-modal
-  [visible]="showRightsModal"
-  (visibleChange)="showRightsModal = $event"
-  backdrop="static"
-  size="lg"
->
-  <c-modal-header>
-    <h5 cModalTitle>Rights Management - {{selectedUser?.username}}</h5>
-    <button (click)="closeRightsModal()" cModalClose class="btn-close"></button>
-  </c-modal-header>
-  <c-modal-body>
-    <form>
-      <div class="mb-3">
-        <label>Email</label>
-        <p>{{selectedUser?.email}}</p>
-      </div>
-      <div class="mb-3">
-        <label>Current Roles</label>
-        <p>{{formatRoles(selectedUser?.roles)}}</p>
-      </div>
-      <div class="mb-3">
-        <c-form-check
-          id="manageUsers"
-          label="Manage Users"
-          [(ngModel)]="rightsForm.manageUsers"
-          name="manageUsers"
-        ></c-form-check>
-      </div>
-      <div class="mb-3">
-        <c-form-check
-          id="manageTasks"
-          label="Manage Tasks"
-          [(ngModel)]="rightsForm.manageTasks"
-          name="manageTasks"
-        ></c-form-check>
-      </div>
-      <div class="mb-3">
-        <c-form-check
-          id="adminAccess"
-          label="Admin Access"
-          [(ngModel)]="rightsForm.adminAccess"
-          name="adminAccess"
-        ></c-form-check>
-      </div>
-    </form>
-  </c-modal-body>
-  <c-modal-footer>
-    <button (click)="closeRightsModal()" cButton color="secondary">
-      Cancel
-    </button>
-    <button (click)="saveUserRights()" cButton color="primary">
-      Save Changes
-    </button>
-  </c-modal-footer>
-</c-modal> -->
-
-
-
-<!-- TOADD
-Custom headers
-custom table header templates ~4.7.7
-To add custom column header template with a labelTemplateName:
-
-HTML: add ng-template with cTemplateId="columnLabel_labelTemplateName" and let-column template variable
-TypeScript: define IColumns[] config with _labelTemplateId and optional _data
-<c-smart-table
-  [columnFilter]="true"
-  [columnSorter]="true"
-  [columns]="columns"
-  [itemsPerPageSelect]="true"
-  [items]="newData"
-  [tableProps]="{ hover: true, striped: true, responsive: true }"
-  header
-  itemsPerPage="10"
-  pagination
->
-
-  <ng-template cTemplateId="columnLabel_all" let-column>
-    <div class="d-inline">
-      {{ column.label }}
-      <ng-container *ngTemplateOutlet="icon; context: {$implicit: column}"></ng-container>
-    </div>
-  </ng-template>
-
-  <ng-template cTemplateId="columnLabel_registered" let-column>
-    <ng-container *ngTemplateOutlet="icon; context: {$implicit: column}"></ng-container>
-  </ng-template>
-
-</c-smart-table>
-
-<ng-template #icon let-column>
-  @if (column?._data?.tooltip) {
-    <div class="d-inline"
-         [cTooltipTrigger]="'hover'"
-         [cTooltip]="column?._data?.tooltip"
-         cTooltipPlacement="top"
-    >
-      <svg [cIcon]="icons[column?._data?.icon]" size="sm" title="Info Icon" class="ms-1"></svg>
-    </div>
-  }
-
-</ng-template>
-import { NgTemplateOutlet } from '@angular/common';
-import { Component } from '@angular/core';
-
-import { IColumn, IItem, SmartTableComponent, TemplateIdDirective, TooltipDirective } from '@coreui/angular';
-import { cilBadge, cilCalendar, cilGroup, cilUser } from '@coreui/icons';
-import { IconDirective } from '@coreui/icons-angular';
-import usersData from './data';
-
-interface IData extends IItem {
-  id?: number;
-  name?: string;
-  role?: string;
-  status?: string;
-  registered?: string;
-  _data?: { tooltip: string; icon: string };
-}
-
-@Component({
-  selector: 'docs-smart-table08',
-  templateUrl: './smart-table08.component.html',
-  standalone: true,
-  imports: [SmartTableComponent, TemplateIdDirective, NgTemplateOutlet, TooltipDirective, IconDirective]
-})
-export class SmartTable08Component {
-  icons = { cilBadge, cilCalendar, cilGroup, cilUser };
-
-  newData: IData[] = usersData.map((item) => {
-    const { id, name, role, status, registered } = { ...item } as Partial<NonNullable<typeof item>>;
-    return { id, name, role, status, registered } as IData;
-  });
-
-  columns: IColumn[] = [
-    {
-      key: 'name',
-      label: 'Name',
-      _style: { width: '30%' },
-      _labelTemplateId: 'all',
-      _data: { tooltip: 'User Name', icon: 'cilUser' }
-    },
-    {
-      key: 'role',
-      label: 'Role',
-      _style: { width: '20%' },
-      _labelTemplateId: 'all',
-      _data: { tooltip: 'User Role', icon: 'cilGroup' }
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      _style: { width: '25%' },
-      _labelTemplateId: 'all',
-      _data: { tooltip: 'User Status', icon: 'cilBadge' }
-    },
-    {
-      key: 'registered',
-      label: 'Registered',
-      _style: { width: '25%' },
-      _data: { tooltip: 'Date Registered', icon: 'cilCalendar' }
-    } -->
-  <!-- ];
-} -->

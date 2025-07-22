@@ -1,8 +1,33 @@
 import { Component, OnInit } from '@angular/core';
-import { AlignDirective, BorderDirective, CardBodyComponent, CardComponent, CardHeaderComponent, ColComponent, RowComponent, TableActiveDirective, TableColorDirective, TableDirective } from '@coreui/angular';
+import { NgTemplateOutlet } from '@angular/common';
+import { 
+  AlignDirective, 
+  BorderDirective, 
+  CardBodyComponent, 
+  CardComponent, 
+  CardHeaderComponent, 
+  ColComponent, 
+  RowComponent,
+  TemplateIdDirective,
+  TooltipDirective,
+  BadgeComponent,
+  TableDirective,
+  FormCheckComponent,
+  SpinnerComponent
+} from '@coreui/angular';
+import { IconDirective } from '@coreui/icons-angular';
+import { cilUser, cilEnvelopeOpen, cilBadge, cilToggleOn, cilToggleOff } from '@coreui/icons';
 import { UserService } from '../../../services/user/user.service';
 import { CommonModule } from '@angular/common';
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+
+interface IUserData {
+  id?: string;
+  username?: string;
+  email?: string;
+  roles?: string[];
+  isActive?: boolean;
+}
 
 @Component({
   selector: 'app-user',
@@ -15,9 +40,14 @@ import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
     CardHeaderComponent,
     ColComponent,
     RowComponent,
-    TableActiveDirective,
-    TableColorDirective,
+    TemplateIdDirective,
+    NgTemplateOutlet,
+    TooltipDirective,
+    IconDirective,
+    BadgeComponent,
     TableDirective,
+    FormCheckComponent,
+    SpinnerComponent,
     CommonModule
   ],
   templateUrl: './user.component.html',
@@ -26,9 +56,21 @@ import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 })
 export class UserComponent implements OnInit {
   users: any[] = [];
-  selectedUser: any = null;
-  rightsForm: any = {};
-  showRightsModal = false;
+  userData: IUserData[] = [];
+  filteredUsers: IUserData[] = [];
+  paginatedUsers: IUserData[] = [];
+  
+  // Loading state
+  isLoading = true;
+  
+  // Pagination and search properties
+  currentPage = 1;
+  itemsPerPage = 10;
+  totalItems = 0;
+  searchTerm = '';
+  itemsPerPageOptions = [5, 10, 25, 50];
+  
+  icons = { cilUser, cilEnvelopeOpen, cilBadge, cilToggleOn, cilToggleOff };
 
   constructor(private userService: UserService) {}
 
@@ -37,9 +79,85 @@ export class UserComponent implements OnInit {
   }
 
   loadUsers(): void {
-    this.userService.getUsers().subscribe((data: any) => {
-      this.users = Array.isArray(data) ? data : (data?.users || []);
+    this.isLoading = true;
+    this.userService.getUsers().subscribe({
+      next: (data: any) => {
+        this.users = Array.isArray(data) ? data : (data?.users || []);
+        this.userData = this.users.map(user => ({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          roles: user.roles,
+          isActive: user.isActive
+        }));
+        this.applyFiltersAndPagination();
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading users:', error);
+        this.isLoading = false;
+      }
     });
+  }
+
+  onSearch(event: any): void {
+    this.searchTerm = event.target.value.toLowerCase();
+    this.currentPage = 1; // Reset to first page when searching
+    this.applyFiltersAndPagination();
+  }
+
+  onItemsPerPageChange(event: any): void {
+    this.itemsPerPage = parseInt(event.target.value);
+    this.currentPage = 1; // Reset to first page when changing items per page
+    this.applyFiltersAndPagination();
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    this.applyFiltersAndPagination();
+  }
+
+  applyFiltersAndPagination(): void {
+    // Apply search filter
+    this.filteredUsers = this.userData.filter(user => {
+      if (!this.searchTerm) return true;
+      
+      const searchFields = [
+        user.username?.toLowerCase() || '',
+        user.email?.toLowerCase() || '',
+        user.roles?.join(' ').toLowerCase() || '',
+        user.isActive ? 'active' : 'inactive'
+      ];
+      
+      return searchFields.some(field => field.includes(this.searchTerm));
+    });
+
+    this.totalItems = this.filteredUsers.length;
+
+    // Apply pagination
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const endIndex = startIndex + this.itemsPerPage;
+    this.paginatedUsers = this.filteredUsers.slice(startIndex, endIndex);
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.totalItems / this.itemsPerPage);
+  }
+
+  get pages(): number[] {
+    const pages: number[] = [];
+    for (let i = 1; i <= this.totalPages; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  get startItem(): number {
+    return this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+  }
+
+  get endItem(): number {
+    return Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
   }
 
   toggleUserStatus(userId: string, currentStatus: boolean): void {
@@ -49,39 +167,30 @@ export class UserComponent implements OnInit {
         if (user) {
           user.isActive = !currentStatus;
         }
+        this.loadUsers();
       },
       (error) => console.error('Error updating user status:', error)
     );
   }
 
-  // openRightsModal(user: any): void {
-  //   this.selectedUser = user;
-  //   this.rightsForm = { ...user.rights || {} };
-  //   this.showRightsModal = true;
-  // }
+  getRoleBadgeColor(role: string): string {
+    switch (role.toLowerCase()) {
+      case 'admin':
+      case 'role_admin':
+        return 'danger';
+      case 'manager':
+      case 'role_manager':
+        return 'warning';
+      case 'user':
+      case 'role_user':
+        return 'primary';
+      default:
+        return 'secondary';
+    }
+  }
 
-//   saveUserRights(): void {
-//     if (!this.selectedUser) return;
-    
-//     this.userService.updateUserRights(this.selectedUser.id, this.rightsForm).subscribe(
-//       () => {
-//         const user = this.users.find(u => u.id === this.selectedUser.id);
-//         if (user) {
-//           user.rights = { ...this.rightsForm };
-//         }
-//         this.showRightsModal = false;
-//       },
-//       (error) => console.error('Error updating user rights:', error)
-//     );
-//   }
-
-//   closeRightsModal(): void {
-//     this.showRightsModal = false;
-//   }
-
-//   formatRoles(roles: string[]): string {
-//     return roles?.join(', ') || '';
-//   }
-// 
-
+  formatRoleName(role: string): string {
+    return role.replace('ROLE_', '').toLowerCase().charAt(0).toUpperCase() + 
+           role.replace('ROLE_', '').toLowerCase().slice(1);
+  }
 }

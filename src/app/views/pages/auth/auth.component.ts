@@ -51,7 +51,7 @@ export class AuthComponent {
     
     this.authService.login({ email, password }).subscribe({
       next: (response: { accessToken: string; refreshToken: string; }) => {
-        this.authService.saveToken(response.accessToken);
+        this.authService.saveToken(response.accessToken); // This will now also save username
         this.router.navigate(['/dashboard/dash']);
       },
       error: (err: string) => {
