@@ -29,6 +29,8 @@ import { GroupService, Group, CreateGroupDto, UpdateGroupDto, AddMembersDto } fr
 import { UserService } from '../../../services/user/user.service';
 import { CommonModule } from '@angular/common';
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-group',
@@ -57,8 +59,10 @@ import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
     FormTextDirective,
     IconDirective,
     ReactiveFormsModule,
-    CommonModule
+    CommonModule,
+    ToastModule
   ],
+  providers: [MessageService],
   templateUrl: './group.component.html',
   styleUrls: ['./group.component.scss'],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
@@ -95,18 +99,20 @@ export class GroupComponent implements OnInit {
   constructor(
     private groupService: GroupService,
     private userService: UserService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private messageService: MessageService
   ) {
     this.createGroupForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
       description: [''],
-      managerId: ['', Validators.required]
+      managerId: [''],  // optional
+      memberIds: [[]]
     });
 
     this.editGroupForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
       description: [''],
-      managerId: ['', Validators.required]
+      managerId: ['']  // optional
     });
 
     this.addMembersForm = this.fb.group({
@@ -196,6 +202,12 @@ export class GroupComponent implements OnInit {
     this.paginatedGroups = this.filteredGroups.slice(startIndex, startIndex + this.itemsPerPage);
   }
 
+  onCreateMembersSelect(event: Event): void {
+    const selectElement = event.target as HTMLSelectElement;
+    const selectedOptions = Array.from(selectElement.selectedOptions, option => option.value);
+    this.createGroupForm.patchValue({ memberIds: selectedOptions });
+  }
+
   openCreateModal(): void {
     this.showCreateModal = true;
     this.createGroupForm.reset({
@@ -238,7 +250,7 @@ export class GroupComponent implements OnInit {
     this.showAddMembersModal = false;
   }
 
-  onMembersSelect(event: Event): void {
+  onAddMembersSelect(event: Event): void {
     const selectElement = event.target as HTMLSelectElement;
     const selectedOptions = Array.from(selectElement.selectedOptions, option => option.value);
     this.addMembersForm.patchValue({ memberIds: selectedOptions });
@@ -252,23 +264,24 @@ export class GroupComponent implements OnInit {
 
     this.isCreating = true;
     this.errorMessage = '';
-    const formValue = this.createGroupForm.value;
+    const form = this.createGroupForm.value;
 
-    const createGroupDto: CreateGroupDto = {
-      name: formValue.name,
-      description: formValue.description,
-      managerId: formValue.managerId
+    const createDto: CreateGroupDto = {
+      name: form.name,
+      description: form.description,
+      managerId: form.managerId,
+      memberIds: form.memberIds
     };
 
-    this.groupService.createGroup(createGroupDto).subscribe({
+    this.groupService.createGroup(createDto).subscribe({
       next: () => {
         this.closeCreateModal();
         this.loadGroups();
+        this.messageService.add({severity:'success', summary:'Success', detail:'Group created'});
       },
-      error: (error) => {
-        console.error('Error creating group:', error);
-        this.errorMessage = error.message || 'Failed to create group. Please try again.';
-        this.isCreating = false;
+      error: (err) => {
+        console.error('Error:', err);
+        this.messageService.add({severity:'error', summary:'Error', detail: err});
       },
       complete: () => {
         this.isCreating = false;
@@ -318,14 +331,15 @@ export class GroupComponent implements OnInit {
     this.errorMessage = '';
     const formValue = this.addMembersForm.value;
 
-    const addMembersDto: AddMembersDto = {
-      memberIds: formValue.memberIds
+    const addMembersDto = {
+      userIds: formValue.memberIds
     };
 
     this.groupService.addGroupMembers(this.currentGroupId, addMembersDto).subscribe({
       next: () => {
         this.closeAddMembersModal();
         this.loadGroups();
+        this.messageService.add({severity:'success', summary:'Success', detail:'Members added'});
       },
       error: (error) => {
         console.error('Error adding members:', error);

@@ -256,12 +256,27 @@
               {{ user.username }} ({{ user.email }})
             </option>
           </select>
-          <div 
+          <div
             class="invalid-feedback"
             *ngIf="createGroupForm.get('managerId')?.invalid && createGroupForm.get('managerId')?.touched"
           >
             Manager is required
           </div>
+        </c-col>
+
+        <c-col md="12" class="mb-3">
+          <label cFormLabel for="memberIds">Members</label>
+          <select
+            cFormSelect
+            id="memberIds"
+            formControlName="memberIds"
+            multiple
+            (change)="onCreateMembersSelect($event)"
+          >
+            <option *ngFor="let user of availableUsers" [value]="user.id">
+              {{ user.username }} ({{ user.email }})
+            </option>
+          </select>
         </c-col>
       </c-row>
       
@@ -293,7 +308,9 @@
       <c-spinner *ngIf="isCreating" size="sm" class="me-1"></c-spinner>
       {{ isCreating ? 'Creating...' : 'Create Group' }}
     </button>
-  </c-modal-footer>
+      </c-modal-footer>
+  <!-- Toast Container -->
+  <p-toast></p-toast>
 </c-modal>
 
 <!-- Edit Group Modal -->
@@ -423,7 +440,7 @@
             id="members"
             multiple
             size="5"
-            (change)="onMembersSelect($event)"
+            (change)="onAddMembersSelect($event)"
           >
             <option *ngFor="let user of availableUsers" [value]="user.id">
               {{ user.username }} ({{ user.email }})

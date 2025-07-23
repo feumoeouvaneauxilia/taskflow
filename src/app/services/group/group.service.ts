@@ -17,7 +17,8 @@ export interface Group {
 export interface CreateGroupDto {
   name: string;
   description?: string;
-  managerId: string;
+  managerId?: string;
+  memberIds?: string[];
 }
 
 export interface UpdateGroupDto {
@@ -27,7 +28,7 @@ export interface UpdateGroupDto {
 }
 
 export interface AddMembersDto {
-  memberIds: string[];
+  userIds: string[];
 }
 
 @Injectable({
