@@ -426,7 +426,15 @@
             <p><strong>Manager:</strong> {{ userNames[selectedGroup.managerId] || selectedGroup.managerId }}</p>
           </c-col>
           <c-col sm="6">
-            <p><strong>Members:</strong> {{ getMemberNames(selectedGroup.memberIds) }}</p>
+            <p><strong>Members:</strong></p>
+            <ul class="list-unstyled">
+              <li *ngFor="let memberId of selectedGroup.memberIds" class="d-flex align-items-center justify-content-between">
+                <span>{{ userNames[memberId] || memberId }}</span>
+                <button cButton color="danger" size="sm" (click)="removeMember(selectedGroup.id, memberId)">
+                  <svg [cIcon]="icons.cilTrash" size="sm" class="me-1" style="color:#fff"></svg>Remove
+                </button>
+              </li>
+            </ul>
             <p><strong>Created At:</strong> {{ formatDate(selectedGroup.createdAt) }}</p>
             <p><strong>Updated At:</strong> {{ formatDate(selectedGroup.updatedAt) }}</p>
           </c-col>
