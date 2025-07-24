@@ -141,3 +141,168 @@ table {
     }
   }
 }
+
+// View Group Modal Styling
+.view-modal {
+  .modal-content {
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+  }
+  c-modal-header {
+    background-color: #232323;
+    color: #fff;
+    border-bottom: none;
+    padding: 1rem 1.5rem;
+  }
+  c-modal-body {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    p {
+      margin-bottom: 0.75rem;
+      strong {
+        color: #232323;
+      }
+    }
+  }
+  c-modal-footer {
+    background-color: #f8f9fa;
+    border-top: none;
+    padding: 1rem 1.5rem;
+  }
+}
+
+// Add Members Modal Styling
+.add-members-modal {
+  .modal-content {
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+  }
+  c-modal-header {
+    background-color: #232323;
+    color: #fff;
+    border-bottom: none;
+    padding: 1rem 1.5rem;
+  }
+  c-modal-body {
+    background-color: #fff;
+    padding: 1.5rem;
+    select[cFormSelect] {
+      // Use CoreUI form-select styling
+      @extend .form-select !optional;
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+  }
+  c-modal-footer {
+    background-color: #fff;
+    border-top: none;
+    padding: 1rem 1.5rem;
+  }
+}
+
+// Edit Group Modal Styling
+.edit-modal {
+  .modal-content {
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+  }
+  c-modal-header {
+    background-color: #232323;
+    color: #fff;
+    border-bottom: none;
+    padding: 1rem 1.5rem;
+    button[cButtonClose] {
+      // Ensure close icon is visible on dark bg
+      svg {
+        fill: #fff;
+      }
+    }
+  }
+  c-modal-body {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+  }
+  c-modal-footer {
+    background-color: #f8f9fa;
+    border-top: none;
+    padding: 1rem 1.5rem;
+    button[cButton] {
+      &.btn-danger {
+        background-color: #e53935;
+        border-color: #e53935;
+        color: #fff;
+      }
+    }
+  }
+}
+
+// Create Group Modal Styling
+.create-modal {
+  .modal-content {
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+  }
+  c-modal-header {
+    background-color: #232323;
+    color: #fff;
+    border-bottom: none;
+    padding: 1rem 1.5rem;
+  }
+  c-modal-body {
+    background-color: #fdfdfd;
+    padding: 2rem;
+    form[cForm] {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      c-col {
+        display: flex;
+        flex-direction: column;
+        label[cFormLabel] {
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+        }
+        input[cFormControl],
+        textarea[cFormControl],
+        select[cFormSelect] {
+          border: 1px solid #ced4da;
+          border-radius: 0.375rem;
+          padding: 0.5rem;
+          transition: border-color 0.2s;
+          &:focus {
+            outline: none;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+          }
+        }
+        select[cFormSelect][multiple] {
+          min-height: 100px;
+        }
+        .invalid-feedback {
+          color: #e53935;
+          font-size: 0.8rem;
+        }
+      }
+    }
+  }
+  c-modal-footer {
+    background-color: #fdfdfd;
+    border-top: none;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+  }
+}
+
+// Shared view info grid spacing
+.view-info-row {
+  gap: 1.5rem;
+  p {
+    margin-bottom: 0.75rem;
+  }
+}

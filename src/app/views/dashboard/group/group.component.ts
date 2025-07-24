@@ -83,6 +83,7 @@ export class GroupComponent implements OnInit {
   showCreateModal = false;
   showEditModal = false;
   showAddMembersModal = false;
+  showViewModal = false;
   
   createGroupForm: FormGroup;
   editGroupForm: FormGroup;
@@ -125,13 +126,19 @@ export class GroupComponent implements OnInit {
     this.loadAvailableUsers();
   }
 
-  loadGroups(): void {
+  /**
+   * Loads groups and optionally calls a callback when done.
+   */
+  loadGroups(onComplete?: () => void): void {
     this.isLoading = true;
     this.groupService.getAllGroups().subscribe({
       next: (groups) => {
         this.groups = groups;
         this.loadUserNames();
         this.applyFiltersAndPagination();
+        if (onComplete) {
+          onComplete();
+        }
         this.isLoading = false;
       },
       error: (error) => {
@@ -276,8 +283,9 @@ export class GroupComponent implements OnInit {
     this.groupService.createGroup(createDto).subscribe({
       next: () => {
         this.closeCreateModal();
-        this.loadGroups();
-        this.messageService.add({severity:'success', summary:'Success', detail:'Group created'});
+        this.loadGroups(() => {
+          this.messageService.add({severity:'success', summary:'Success', detail:'Group created'});
+        });
       },
       error: (err) => {
         console.error('Error:', err);
@@ -308,11 +316,14 @@ export class GroupComponent implements OnInit {
     this.groupService.updateGroup(this.selectedGroup.id, updateGroupDto).subscribe({
       next: () => {
         this.closeEditModal();
-        this.loadGroups();
+        this.loadGroups(() => {
+          this.messageService.add({severity:'success', summary:'Success', detail:'Group updated'});
+        });
       },
       error: (error) => {
         console.error('Error updating group:', error);
         this.errorMessage = error.message || 'Failed to update group. Please try again.';
+        this.messageService.add({severity:'error', summary:'Error', detail: this.errorMessage});
         this.isUpdating = false;
       },
       complete: () => {
@@ -338,12 +349,14 @@ export class GroupComponent implements OnInit {
     this.groupService.addGroupMembers(this.currentGroupId, addMembersDto).subscribe({
       next: () => {
         this.closeAddMembersModal();
-        this.loadGroups();
-        this.messageService.add({severity:'success', summary:'Success', detail:'Members added'});
+        this.loadGroups(() => {
+          this.messageService.add({severity:'success', summary:'Success', detail:'Members added'});
+        });
       },
       error: (error) => {
         console.error('Error adding members:', error);
         this.errorMessage = error.message || 'Failed to add members. Please try again.';
+        this.messageService.add({severity:'error', summary:'Error', detail: this.errorMessage});
         this.isAddingMembers = false;
       },
       complete: () => {
@@ -356,7 +369,9 @@ export class GroupComponent implements OnInit {
     if (confirm('Are you sure you want to remove this member?')) {
       this.groupService.removeGroupMember(groupId, userId).subscribe({
         next: () => {
-          this.loadGroups();
+          this.loadGroups(() => {
+            this.messageService.add({severity:'success', summary:'Success', detail:'Member removed'});
+          });
         },
         error: (error) => {
           console.error('Error removing member:', error);
@@ -370,16 +385,32 @@ export class GroupComponent implements OnInit {
     if (confirm('Are you sure you want to delete this group?')) {
       this.groupService.deleteGroup(id).subscribe({
         next: () => {
-          this.loadGroups();
+          this.loadGroups(() => {
+            this.messageService.add({severity:'success', summary:'Success', detail:'Group deleted'});
+          });
         },
         error: (error) => {
           console.error('Error deleting group:', error);
-          this.errorMessage = error.message || 'Failed to delete group. Please try again.';
+          const msg = error.message || 'Failed to delete group. Please try again.';
+          this.errorMessage = msg;
+          this.messageService.add({severity:'error', summary:'Error', detail: msg});
         }
       });
     }
   }
 
+  // Open view modal
+  viewGroup(group: Group): void {
+    this.selectedGroup = group;
+    this.showViewModal = true;
+  }
+
+  // Close view modal
+  closeViewModal(): void {
+    this.showViewModal = false;
+  }
+
+  // Mark all form controls as touched
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.keys(formGroup.controls).forEach(key => {
       const control = formGroup.get(key);
@@ -387,6 +418,7 @@ export class GroupComponent implements OnInit {
     });
   }
 
+  // Calculate total pages for pagination
   get totalPages(): number {
     return Math.ceil(this.totalItems / this.itemsPerPage);
   }

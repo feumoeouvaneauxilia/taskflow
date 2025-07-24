@@ -1,4 +1,9 @@
 <c-col xs="12">
+  <!-- Global Toast Container -->
+  <p-toast position="top-right"></p-toast>
+</c-col>
+
+<c-col xs="12">
   <c-card class="mb-4">
     <c-card-header class="d-flex justify-content-between align-items-center">
       <strong>Group Management</strong>
@@ -8,7 +13,7 @@
         size="sm"
         (click)="openCreateModal()"
         [disabled]="isLoading"
-        class="d-flex align-items-center"
+        class="d-flex align-items-center text-white"
       >
         <svg [cIcon]="icons.cilPlus" size="sm" class="me-1" style="color:#fff"></svg>
         Create Group
@@ -53,43 +58,31 @@
         </div>
 
         <div class="table-responsive">
-          <table cTable [hover]="true" [striped]="true" class="table">
+          <table cTable [hover]="true" [striped]="true" class="table text-center">
             <thead>
-  <tr>
-    <th>#</th>
+            <tr>
+    <th class="black-header text-center">#</th>
     <th class="black-header">
       <div class="d-flex align-items-center">
-        <span>Name</span>
+        <span class="text-center">Name</span>
         <svg [cIcon]="icons.cilPeople" size="sm" class="ms-1 text-danger"></svg>
       </div>
     </th>
     <th class="black-header">
       <div class="d-flex align-items-center">
-        <span>Description</span>
-        <svg [cIcon]="icons.cilAlignLeft" size="sm" class="ms-1 text-danger"></svg>
-      </div>
-    </th>
-    <th class="black-header">
-      <div class="d-flex align-items-center">
-        <span>Manager</span>
+        <span class="text-center">Manager</span>
         <svg [cIcon]="icons.cilUser" size="sm" class="ms-1 text-danger"></svg>
       </div>
     </th>
     <th class="black-header">
       <div class="d-flex align-items-center">
-        <span>Members</span>
-        <svg [cIcon]="icons.cilGroup" size="sm" class="ms-1 text-danger"></svg>
-      </div>
-    </th>
-    <th class="black-header">
-      <div class="d-flex align-items-center">
-        <span>Created At</span>
+        <span class="text-center">Created At</span>
         <svg [cIcon]="icons.cilCalendar" size="sm" class="ms-1 text-danger"></svg>
       </div>
     </th>
     <th class="black-header">
       <div class="d-flex align-items-center">
-        <span>Actions</span>
+        <span class="text-center">Actions</span>
         <svg [cIcon]="icons.cilSettings" size="sm" class="ms-1 text-danger"></svg>
       </div>
     </th>
@@ -99,20 +92,21 @@
               <tr *ngFor="let group of paginatedGroups; let i = index">
                 <th scope="row">{{ (currentPage - 1) * itemsPerPage + i + 1 }}</th>
                 <td>{{ group.name }}</td>
-                <td>{{ group.description || '-' }}</td>
                 <td>{{ userNames[group.managerId] || group.managerId }}</td>
-                <td>{{ getMemberNames(group.memberIds) }}</td>
                 <td>{{ formatDate(group.createdAt) }}</td>
-                <td>
-                  <div class="d-flex gap-2">
+                <td class="text-center">
+                  <div class="d-flex gap-2 justify-content-center">
+                    <button cButton color="warning" size="sm" (click)="viewGroup(group)" class="d-flex align-items-center">
+                      <svg [cIcon]="icons.cilSearch" size="sm" class="me-1"></svg>View
+                    </button>
                     <button 
                       cButton 
                       color="primary" 
                       size="sm"
                       (click)="openEditModal(group)"
-                      class="d-flex align-items-center"
+                      class="d-flex align-items-center text-black"
                     >
-                      <svg [cIcon]="icons.cilPencil" size="sm" class="me-1"></svg>
+                      <svg [cIcon]="icons.cilPencil" size="sm" class="me-1" style="color:#000"></svg>
                       Edit
                     </button>
                     <button 
@@ -139,7 +133,7 @@
                 </td>
               </tr>
               <tr *ngIf="paginatedGroups.length === 0 && !isLoading">
-                <td colspan="7" class="text-center">
+                <td colspan="5" class="text-center">
                   {{ searchTerm ? 'No groups found matching your search.' : 'No groups found.' }}
                 </td>
               </tr>
@@ -156,11 +150,7 @@
           <nav *ngIf="totalPages > 1">
             <ul class="pagination pagination-sm mb-0">
               <li class="page-item" [class.disabled]="currentPage === 1">
-                <button 
-                  class="page-link" 
-                  (click)="onPageChange(currentPage - 1)"
-                  [disabled]="currentPage === 1"
-                >
+                <button class="page-link" (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 1">
                   Previous
                 </button>
               </li>
@@ -197,6 +187,7 @@
 
 <!-- Create Group Modal -->
 <c-modal 
+  class="create-modal"
   [visible]="showCreateModal" 
   (visibleChange)="showCreateModal = $event"
   backdrop="static"
@@ -244,7 +235,7 @@
         </c-col>
         
         <c-col md="12" class="mb-3">
-          <label cFormLabel for="managerId">Manager *</label>
+          <label cFormLabel for="managerId">Manager</label>
           <select
             cFormSelect
             id="managerId"
@@ -270,6 +261,7 @@
             cFormSelect
             id="memberIds"
             formControlName="memberIds"
+            size="5"
             multiple
             (change)="onCreateMembersSelect($event)"
           >
@@ -286,7 +278,7 @@
     </form>
   </c-modal-body>
   
-  <c-modal-footer>
+                <c-modal-footer>
     <button 
       cButton 
       color="danger" 
@@ -302,19 +294,18 @@
       size="sm"
       (click)="createGroup()"
       [disabled]="isCreating || createGroupForm.invalid"
-      class="d-flex align-items-center"
+      class="d-flex align-items-center text-white"
     >
       <svg [cIcon]="icons.cilPlus" size="sm" class="me-1" style="color:#fff"></svg>
       <c-spinner *ngIf="isCreating" size="sm" class="me-1"></c-spinner>
       {{ isCreating ? 'Creating...' : 'Create Group' }}
     </button>
       </c-modal-footer>
-  <!-- Toast Container -->
-  <p-toast></p-toast>
 </c-modal>
 
 <!-- Edit Group Modal -->
 <c-modal 
+  class="edit-modal"
   [visible]="showEditModal" 
   (visibleChange)="showEditModal = $event"
   backdrop="static"
@@ -362,7 +353,7 @@
         </c-col>
         
         <c-col md="12" class="mb-3">
-          <label cFormLabel for="editManagerId">Manager *</label>
+          <label cFormLabel for="editManagerId">Manager</label>
           <select
             cFormSelect
             id="editManagerId"
@@ -412,10 +403,44 @@
       {{ isUpdating ? 'Updating...' : 'Update Group' }}
     </button>
   </c-modal-footer>
-</c-modal>
+  </c-modal>
+
+  <!-- View Group Modal -->
+  <c-modal
+    class="view-modal"
+    [visible]="showViewModal"
+    (visibleChange)="showViewModal = $event"
+    backdrop="static"
+    size="lg"
+  >
+    <c-modal-header>
+      <h4 cModalTitle>Group Details</h4>
+      <button cButtonClose (click)="closeViewModal()" aria-label="Close"></button>
+    </c-modal-header>
+    <c-modal-body>
+      <div *ngIf="selectedGroup">
+        <c-row class="view-info-row">
+          <c-col sm="6">
+            <p><strong>Name:</strong> {{ selectedGroup.name }}</p>
+            <p><strong>Description:</strong> {{ selectedGroup.description || '-' }}</p>
+            <p><strong>Manager:</strong> {{ userNames[selectedGroup.managerId] || selectedGroup.managerId }}</p>
+          </c-col>
+          <c-col sm="6">
+            <p><strong>Members:</strong> {{ getMemberNames(selectedGroup.memberIds) }}</p>
+            <p><strong>Created At:</strong> {{ formatDate(selectedGroup.createdAt) }}</p>
+            <p><strong>Updated At:</strong> {{ formatDate(selectedGroup.updatedAt) }}</p>
+          </c-col>
+        </c-row>
+      </div>
+    </c-modal-body>
+    <c-modal-footer>
+      <button cButton color="danger" size="sm" (click)="closeViewModal()">Close</button>
+    </c-modal-footer>
+  </c-modal>
 
 <!-- Add Members Modal -->
 <c-modal 
+  class="add-members-modal"
   [visible]="showAddMembersModal" 
   (visibleChange)="showAddMembersModal = $event"
   backdrop="static"
