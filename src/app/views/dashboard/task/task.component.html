@@ -23,7 +23,6 @@
         </div>
       </div>
 
-      <!-- Main Content -->
       <div *ngIf="!isLoading">
         <!-- Search and Items per page controls -->
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
@@ -88,6 +87,7 @@
                 <th>Created By</th>
                 <th>Validated</th>
                 <th>Admin Complete</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -113,9 +113,23 @@
                     {{ task.adminComplete ? 'Yes' : 'No' }}
                   </c-badge>
                 </td>
+<td>
+  <button cButton color="info" size="sm" class="me-1" (click)="openViewModal(task)">
+    <svg [cIcon]="icons.cilTask" size="sm" class="me-1"></svg> View
+  </button>
+  <button cButton color="warning" size="sm" class="me-1" (click)="editTask(task)">
+    <svg [cIcon]="icons.cilPencil" size="sm" class="me-1"></svg> Edit
+  </button>
+  <button cButton color="success" size="sm" class="me-1" (click)="openUserModal(task)">
+    <svg [cIcon]="icons.cilUser" size="sm" class="me-1"></svg> Users
+  </button>
+  <button cButton color="secondary" size="sm" (click)="openGroupModal(task)">
+    <svg [cIcon]="icons.cilPeople" size="sm" class="me-1"></svg> Groups
+  </button>
+</td>
               </tr>
               <tr *ngIf="paginatedTasks.length === 0 && !isLoading">
-                <td colspan="9" class="text-center">
+                <td colspan="10" class="text-center">
                   {{ searchTerm ? 'No tasks found matching your search.' : 'No tasks found.' }}
                 </td>
               </tr>
@@ -175,13 +189,12 @@
 
 <!-- Create Task Modal -->
 <c-modal 
-  [visible]="showCreateModal" 
-  (visibleChange)="showCreateModal = $event"
+  [(visible)]="showCreateModal" 
   backdrop="static"
   size="lg"
 >
   <c-modal-header>
-    <h4 cModalTitle>Create New Task</h4>
+    <h4 cModalTitle>{{ isEditing ? 'Edit Task' : 'Create New Task' }}</h4>
     <button 
       cButtonClose 
       (click)="closeCreateModal()"
@@ -240,30 +253,6 @@
             formControlName="dueAt"
           >
         </c-col>
-        
-        <c-col md="12" class="mb-3">
-          <c-row class="align-items-center">
-            <c-col md="3">
-              <label cFormLabel for="assignedUsers">Assign By User</label>
-            </c-col>
-            <c-col md="9">
-              <select
-                cFormSelect
-                id="assignedUsers"
-                multiple
-                size="3"
-                (change)="onUserSelectionChange($event)"
-              >
-                <option *ngFor="let user of availableUsers" [value]="user.id">
-                  {{ user.username }} ({{ user.email }})
-                </option>
-              </select>
-              <small class="form-text text-muted">
-                Hold Ctrl (Cmd on Mac) to select multiple users
-              </small>
-            </c-col>
-          </c-row>
-        </c-col>
       </c-row>
       
       <div *ngIf="createErrorMessage" class="alert alert-danger" role="alert">
@@ -292,8 +281,221 @@
     >
       <svg [cIcon]="icons.cilTask" size="sm" class="me-1" style="color:#fff"></svg>
       <c-spinner *ngIf="isCreating" size="sm" class="me-1"></c-spinner>
-      {{ isCreating ? 'Creating...' : 'Create Task' }}
+      {{ isCreating ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Task' : 'Create Task') }}
     </button>
+  </c-modal-footer>
+</c-modal>
+
+<!-- Edit Task Modal (reuse Create Modal for editing) -->
+<!-- Title and button text handled in create modal -->
+
+<!-- User Assignment Modal -->
+<c-modal [(visible)]="showUserModal" backdrop="static" size="lg">
+  <c-modal-header>
+    <h4 cModalTitle>Assign Users to Task</h4>
+    <button cButtonClose (click)="closeUserModal()" aria-label="Close"></button>
+  </c-modal-header>
+  <c-modal-body>
+    <div *ngIf="selectedTask">
+      <p><strong>Task:</strong> {{ selectedTask.name }}</p>
+      <hr>
+      
+      <!-- Currently Assigned Users -->
+      <div class="mb-4" *ngIf="getAssignedUsers(selectedTask).length > 0">
+        <h6><strong>Currently Assigned Users:</strong></h6>
+        <div class="assigned-users-list">
+          <div *ngFor="let user of getAssignedUsers(selectedTask)" 
+               class="d-flex align-items-center justify-content-between assigned-user-item">
+            <div class="d-flex align-items-center">
+              <svg [cIcon]="icons.cilUser" size="sm" class="me-2 text-primary"></svg>
+              <span>{{ user.username }} ({{ user.email }})</span>
+            </div>
+            <button 
+              cButton 
+              color="danger" 
+              size="sm" 
+              variant="outline"
+              (click)="unassignUser(user.id)"
+              [disabled]="isUpdatingAssignments"
+              title="Remove user from task"
+            >
+              <svg [cIcon]="icons.cilX" size="sm"></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Add New Users -->
+      <div class="mb-3">
+        <h6><strong>Add Users:</strong></h6>
+        <label class="form-label">Select users to assign (Hold Ctrl to select multiple)</label>
+        <select 
+          class="form-select" 
+          multiple 
+          size="6" 
+          (change)="onNewUserSelection($event)"
+          style="min-height: 150px;"
+        >
+          <option *ngFor="let u of getUnassignedUsers(selectedTask)" [value]="u.id">
+            {{ u.username }} ({{ u.email }})
+          </option>
+        </select>
+        <small class="form-text text-muted mt-2">
+          Only users not currently assigned to this task are shown above.
+        </small>
+      </div>
+    </div>
+  </c-modal-body>
+  <c-modal-footer>
+    <button cButton color="secondary" size="sm" (click)="closeUserModal()">Cancel</button>
+    <button 
+      cButton 
+      color="primary" 
+      size="sm" 
+      (click)="assignSelectedUsers()"
+      [disabled]="isUpdatingAssignments || !hasNewUsersSelected()"
+    >
+      <c-spinner *ngIf="isUpdatingAssignments" size="sm" class="me-1"></c-spinner>
+      {{ isUpdatingAssignments ? 'Updating...' : 'Add Selected Users' }}
+    </button>
+  </c-modal-footer>
+</c-modal>
+
+<!-- Group Assignment Modal -->
+<c-modal [(visible)]="showGroupModal" backdrop="static" size="lg">
+  <c-modal-header>
+    <h4 cModalTitle>Assign Groups to Task</h4>
+    <button cButtonClose (click)="closeGroupModal()" aria-label="Close"></button>
+  </c-modal-header>
+  <c-modal-body>
+    <div *ngIf="selectedTask">
+      <p><strong>Task:</strong> {{ selectedTask.name }}</p>
+      <hr>
+      
+      <!-- Currently Assigned Groups -->
+      <div class="mb-4" *ngIf="getAssignedGroups(selectedTask).length > 0">
+        <h6><strong>Currently Assigned Groups:</strong></h6>
+        <div class="assigned-groups-list">
+          <div *ngFor="let group of getAssignedGroups(selectedTask)" 
+               class="d-flex align-items-center justify-content-between assigned-group-item">
+            <div class="d-flex align-items-center">
+              <svg [cIcon]="icons.cilPeople" size="sm" class="me-2 text-secondary"></svg>
+              <span>{{ group.name }}</span>
+            </div>
+            <button 
+              cButton 
+              color="danger" 
+              size="sm" 
+              variant="outline"
+              (click)="unassignGroup(group.id)"
+              [disabled]="isUpdatingAssignments"
+              title="Remove group from task"
+            >
+              <svg [cIcon]="icons.cilMinus" size="sm"></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Add New Groups -->
+      <div class="mb-3">
+        <h6><strong>Add Groups:</strong></h6>
+        <label class="form-label">Select groups to assign (Hold Ctrl to select multiple)</label>
+        <select 
+          class="form-select" 
+          multiple 
+          size="6" 
+          (change)="onNewGroupSelection($event)"
+          style="min-height: 150px;"
+        >
+          <option *ngFor="let g of getUnassignedGroups(selectedTask)" [value]="g.id">
+            {{ g.name }}
+          </option>
+        </select>
+        <small class="form-text text-muted mt-2">
+          Only groups not currently assigned to this task are shown above.
+        </small>
+      </div>
+    </div>
+  </c-modal-body>
+  <c-modal-footer>
+    <button cButton color="secondary" size="sm" (click)="closeGroupModal()">Cancel</button>
+    <button 
+      cButton 
+      color="primary" 
+      size="sm" 
+      (click)="assignSelectedGroups()"
+      [disabled]="isUpdatingAssignments || !hasNewGroupsSelected()"
+    >
+      <c-spinner *ngIf="isUpdatingAssignments" size="sm" class="me-1"></c-spinner>
+      {{ isUpdatingAssignments ? 'Updating...' : 'Add Selected Groups' }}
+    </button>
+  </c-modal-footer>
+</c-modal>
+
+<!-- View Task Modal -->
+<c-modal [visible]="showViewModal" (visibleChange)="showViewModal = $event" backdrop="static" size="lg">
+  <c-modal-header>
+    <h4 cModalTitle>Task Details</h4>
+    <button cButtonClose (click)="showViewModal=false" aria-label="Close"></button>
+  </c-modal-header>
+  <c-modal-body>
+    <div *ngIf="selectedTask">
+      <p><strong>Name:</strong> {{ selectedTask.name }}</p>
+      <p><strong>Description:</strong> {{ selectedTask.description || 'No description provided' }}</p>
+      <p><strong>Status:</strong> 
+        <c-badge [color]="getStatusBadgeColor(selectedTask.status!)">
+          {{ selectedTask.status }}
+        </c-badge>
+      </p>
+      <p><strong>Start Date:</strong> {{ formatDate(selectedTask.startAt!) }}</p>
+      <p><strong>Due Date:</strong> {{ formatDate(selectedTask.dueAt!) }}</p>
+      <p><strong>Assigned By:</strong> {{ userNames[selectedTask.assignedById!] || 'Unknown' }}</p>
+      <p><strong>Created By:</strong> {{ userNames[selectedTask.createdById!] || 'Unknown' }}</p>
+      <p><strong>Validated:</strong> 
+        <c-badge [color]="selectedTask.isValidated ? 'success' : 'danger'">
+          {{ selectedTask.isValidated ? 'Yes' : 'No' }}
+        </c-badge>
+      </p>
+      <p><strong>Admin Complete:</strong> 
+        <c-badge [color]="selectedTask.adminComplete ? 'success' : 'danger'">
+          {{ selectedTask.adminComplete ? 'Yes' : 'No' }}
+        </c-badge>
+      </p>
+      
+      <hr />
+      
+      <!-- Assigned Users Display -->
+      <div class="mb-3">
+        <h6><strong>Assigned Users:</strong></h6>
+        <div *ngIf="getAssignedUsers(selectedTask).length > 0; else noUsers" class="assigned-list">
+          <div *ngFor="let user of getAssignedUsers(selectedTask)" class="d-flex align-items-center mb-2">
+            <svg [cIcon]="icons.cilUser" size="sm" class="me-2 text-primary"></svg>
+            <span>{{ user.username }} ({{ user.email }})</span>
+          </div>
+        </div>
+        <ng-template #noUsers>
+          <p class="text-muted mb-0">No users assigned to this task</p>
+        </ng-template>
+      </div>
+      
+      <!-- Assigned Groups Display -->
+      <div class="mb-3">
+        <h6><strong>Assigned Groups:</strong></h6>
+        <div *ngIf="getAssignedGroups(selectedTask).length > 0; else noGroups" class="assigned-list">
+          <div *ngFor="let group of getAssignedGroups(selectedTask)" class="d-flex align-items-center mb-2">
+            <svg [cIcon]="icons.cilPeople" size="sm" class="me-2 text-secondary"></svg>
+            <span>{{ group.name }}</span>
+          </div>
+        </div>
+        <ng-template #noGroups>
+          <p class="text-muted mb-0">No groups assigned to this task</p>
+        </ng-template>
+      </div>
+    </div>
+  </c-modal-body>
+  <c-modal-footer>
+    <button cButton color="secondary" size="sm" (click)="showViewModal=false">Close</button>
   </c-modal-footer>
 </c-modal>
 

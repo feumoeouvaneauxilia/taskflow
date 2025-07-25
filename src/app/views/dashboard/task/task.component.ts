@@ -27,13 +27,14 @@ import {
   FormTextDirective
 } from '@coreui/angular';
 import { IconDirective } from '@coreui/icons-angular';
-import { cilCalendar, cilUser, cilTask, cilCheckCircle, cilClock } from '@coreui/icons';
+import { cilCalendar, cilUser, cilTask, cilCheckCircle, cilClock, cilPencil, cilPeople, cilX, cilMinus } from '@coreui/icons';
 import { TaskService } from '../../../services/task/task.service';
 import { UserService } from '../../../services/user/user.service';
 import { AuthService } from '../../../services/auth/auth.service';
 import { CommonModule } from '@angular/common';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
+import { GroupService } from '../../../services/group/group.service';  // group service for assignment
 
 interface ITaskData {
   id?: string;
@@ -96,20 +97,37 @@ export class TaskComponent implements OnInit {
   userNames: { [id: string]: string } = {};
   isLoading = true;
   currentPage = 1;
-  itemsPerPage = 10;
+  itemsPerPage = 5;
   totalItems = 0;
   searchTerm = '';
   itemsPerPageOptions = [5, 10, 25, 50];
-  icons = { cilCalendar, cilUser, cilTask, cilCheckCircle, cilClock };
+  icons = { cilCalendar, cilUser, cilTask, cilCheckCircle, cilClock, cilPencil, cilPeople, cilX, cilMinus };
   showCreateModal = false;
   createTaskForm: FormGroup;
   isCreating = false;
+  isEditing = false;
+  isUpdatingAssignments = false;
   createErrorMessage = '';
   availableUsers: any[] = [];
+  availableGroups: any[] = [];  // list of groups for assignment
+  showViewModal = false;        // control view details modal
+  selectedTask: ITaskData | null = null;
+  selectedUsers: string[] = [];
+  selectedGroups: string[] = [];
+  originalSelectedUsers: string[] = []; // Track original assignments
+  originalSelectedGroups: string[] = []; // Track original assignments
+  newUsersToAssign: string[] = []; // Track newly selected users
+  newGroupsToAssign: string[] = []; // Track newly selected groups
+
+  // New modal control flags
+  showEditModal = false;
+  showUserModal = false;
+  showGroupModal = false;
 
   constructor(
     private taskService: TaskService, 
     private userService: UserService,
+    private groupService: GroupService,  // inject group service
     private fb: FormBuilder,
     private authService: AuthService,
     private messageService: MessageService
@@ -118,14 +136,14 @@ export class TaskComponent implements OnInit {
       name: ['', [Validators.required, Validators.minLength(3)]],
       description: [''],
       startAt: [''],
-      dueAt: [''],
-      assignedUserIds: [[]]
+      dueAt: ['']
     });
   }
 
   ngOnInit(): void {
     this.loadTasks();
     this.loadAvailableUsers();
+    this.loadAvailableGroups();  // load groups
   }
 
   loadTasks(): void {
@@ -184,6 +202,13 @@ export class TaskComponent implements OnInit {
     });
   }
 
+  loadAvailableGroups(): void {
+    this.groupService.getAllGroups().subscribe({
+      next: (groups) => this.availableGroups = Array.isArray(groups) ? groups : [],
+      error: () => this.messageService.add({severity: 'error', summary: 'Error', detail: 'Failed to load groups.'})
+    });
+  }
+
   onSearch(event: any): void {
     this.searchTerm = event.target.value.toLowerCase();
     this.currentPage = 1;
@@ -202,25 +227,61 @@ export class TaskComponent implements OnInit {
   }
 
   openCreateModal(): void {
+    this.isEditing = false;
+    this.selectedTask = null;
     this.showCreateModal = true;
     this.createTaskForm.reset({
       name: '',
       description: '',
       startAt: '',
-      dueAt: '',
-      assignedUserIds: []
+      dueAt: ''
     });
     this.createErrorMessage = '';
   }
 
   closeCreateModal(): void {
     this.showCreateModal = false;
+    this.isEditing = false;
+    this.selectedTask = null;
     this.createErrorMessage = '';
   }
 
-  onUserSelectionChange(event: any): void {
-    const selectedOptions = Array.from(event.target.selectedOptions, (option: any) => option.value);
-    this.createTaskForm.patchValue({ assignedUserIds: selectedOptions });
+  /** Open detail view modal and prepare assignment selections */
+  viewTask(task: ITaskData): void {
+    this.selectedTask = task;
+    this.selectedUsers = [...(task.assignedUserIds || [])];
+    this.selectedGroups = []; // assume task.assignedGroupIds not stored; user can select
+    this.showViewModal = true;
+  }
+
+  /** Handle change in assigned users from view modal */
+  onViewUserChange(event: any): void {
+    const ids = Array.from(event.target.selectedOptions, (o: any) => o.value);
+    if (!this.selectedTask) return;
+    this.taskService.assignMultipleUsers(this.selectedTask.id!, ids).subscribe({
+      next: () => {
+        this.selectedUsers = ids;
+        this.loadTasks();
+      },
+      error: () => this.messageService.add({severity: 'error', summary: 'Error', detail: 'Failed to update users.'})
+    });
+  }
+
+  /** Handle change in assigned group from view modal */
+  onGroupSelectionChange(event: any): void {
+    const newGroups = Array.from(event.target.selectedOptions, (o: any) => o.value);
+    if (!this.selectedTask) return;
+    // detect added or removed
+    const added = newGroups.filter(g => !this.selectedGroups.includes(g));
+    const removed = this.selectedGroups.filter(g => !newGroups.includes(g));
+    added.forEach(groupId => {
+      this.taskService.assignGroup(this.selectedTask!.id!, groupId).subscribe();
+    });
+    removed.forEach(groupId => {
+      this.taskService.unassignGroup(this.selectedTask!.id!, groupId).subscribe();
+    });
+    this.selectedGroups = newGroups;
+    this.loadTasks();
   }
 
   createTask(): void {
@@ -228,6 +289,12 @@ export class TaskComponent implements OnInit {
       this.markFormGroupTouched(this.createTaskForm);
       return;
     }
+
+    if (this.isEditing && this.selectedTask) {
+      this.updateTask();
+      return;
+    }
+
     this.isCreating = true;
     this.createErrorMessage = '';
 
@@ -241,7 +308,7 @@ export class TaskComponent implements OnInit {
       description: formValue.description,
       startAt: formValue.startAt || null,
       dueAt: formValue.dueAt || null,
-      assignedUserIds: formValue.assignedUserIds || [],
+      assignedUserIds: [],
       assignedGroupIds: [],
       createdById: userId,
       assignedById: userId
@@ -268,6 +335,207 @@ export class TaskComponent implements OnInit {
       complete: () => {
         this.isCreating = false;
       }
+    });
+  }
+
+  updateTask(): void {
+    if (!this.selectedTask) return;
+    
+    this.isCreating = true;
+    this.createErrorMessage = '';
+
+    const formValue = this.createTaskForm.value;
+    const taskData: any = {
+      name: formValue.name,
+      description: formValue.description,
+      startAt: formValue.startAt || null,
+      dueAt: formValue.dueAt || null
+    };
+
+    this.taskService.updateTask(this.selectedTask.id!, taskData).subscribe({
+      next: () => {
+        this.closeCreateModal();
+        this.loadTasks();
+        this.messageService.add({severity: 'success', summary: 'Success', detail: 'Task updated successfully.'});
+      },
+      error: (error) => {
+        console.error('Error updating task:', error);
+        this.createErrorMessage = error.message || 'Failed to update task. Please try again.';
+        this.messageService.add({severity: 'error', summary: 'Error', detail: 'Failed to update task.'});
+        this.isCreating = false;
+      },
+      complete: () => {
+        this.isCreating = false;
+      }
+    });
+  }
+
+  /** Edit an existing task */
+  editTask(task: ITaskData): void {
+    this.isEditing = true;
+    this.selectedTask = task;
+    this.showCreateModal = true;
+    
+    // Format dates for datetime-local input
+    const startAt = task.startAt ? new Date(task.startAt).toISOString().slice(0, 16) : '';
+    const dueAt = task.dueAt ? new Date(task.dueAt).toISOString().slice(0, 16) : '';
+    
+    this.createTaskForm.patchValue({
+      name: task.name,
+      description: task.description,
+      startAt: startAt,
+      dueAt: dueAt
+    });
+    this.createErrorMessage = '';
+  }
+
+  /** Open assignment modal for users */
+  openUserAssign(task: ITaskData): void {
+    this.viewTask(task);
+  }
+
+  /** Open assignment modal for groups */
+  openGroupAssign(task: ITaskData): void {
+    this.viewTask(task);
+  }
+
+  // New modal control methods
+  openViewModal(task: ITaskData): void {
+    this.selectedTask = task;
+    this.showViewModal = true;
+  }
+  openEditModal(task: ITaskData): void {
+    this.selectedTask = task;
+    this.showEditModal = true;
+  }
+  closeEditModal(): void { this.showEditModal = false; }
+  openUserModal(task: ITaskData): void {
+    this.selectedTask = task;
+    this.selectedUsers = [...(task.assignedUserIds || [])];
+    this.originalSelectedUsers = [...(task.assignedUserIds || [])];
+    this.showUserModal = true;
+  }
+  closeUserModal(): void { 
+    this.showUserModal = false; 
+    this.selectedUsers = [];
+    this.originalSelectedUsers = [];
+    this.newUsersToAssign = [];
+  }
+  openGroupModal(task: ITaskData): void {
+    this.selectedTask = task;
+    this.selectedGroups = [];
+    this.originalSelectedGroups = [];
+    this.newGroupsToAssign = [];
+    this.showGroupModal = true;
+  }
+  closeGroupModal(): void { 
+    this.showGroupModal = false; 
+    this.selectedGroups = [];
+    this.originalSelectedGroups = [];
+    this.newGroupsToAssign = [];
+  }
+
+  // Handle user assignment changes in dedicated modal
+  onUserAssignmentChange(event: any): void {
+    this.selectedUsers = Array.from(event.target.selectedOptions, (option: any) => option.value);
+  }
+
+  // Handle group assignment changes in dedicated modal
+  onGroupAssignmentChange(event: any): void {
+    this.selectedGroups = Array.from(event.target.selectedOptions, (option: any) => option.value);
+  }
+
+  // Update user assignments with proper API calls
+  updateUserAssignments(): void {
+    if (!this.selectedTask) return;
+    
+    this.isUpdatingAssignments = true;
+    
+    // Find users to add and remove
+    const usersToAdd = this.selectedUsers.filter(id => !this.originalSelectedUsers.includes(id));
+    const usersToRemove = this.originalSelectedUsers.filter(id => !this.selectedUsers.includes(id));
+    
+    // Chain API calls
+    const updatePromises: Promise<any>[] = [];
+    
+    // Add new users
+    usersToAdd.forEach(userId => {
+      updatePromises.push(
+        this.taskService.assignUser(this.selectedTask!.id!, userId).toPromise()
+      );
+    });
+    
+    // Remove users
+    usersToRemove.forEach(userId => {
+      updatePromises.push(
+        this.taskService.unassignUser(this.selectedTask!.id!, userId).toPromise()
+      );
+    });
+    
+    Promise.all(updatePromises).then(() => {
+      this.loadTasks();
+      this.closeUserModal();
+      this.messageService.add({
+        severity: 'success', 
+        summary: 'Success', 
+        detail: 'User assignments updated successfully.'
+      });
+    }).catch((error) => {
+      console.error('Error updating user assignments:', error);
+      this.messageService.add({
+        severity: 'error', 
+        summary: 'Error', 
+        detail: 'Failed to update user assignments.'
+      });
+    }).finally(() => {
+      this.isUpdatingAssignments = false;
+    });
+  }
+
+  // Update group assignments with proper API calls
+  updateGroupAssignments(): void {
+    if (!this.selectedTask) return;
+    
+    this.isUpdatingAssignments = true;
+    
+    // Find groups to add and remove
+    const groupsToAdd = this.selectedGroups.filter(id => !this.originalSelectedGroups.includes(id));
+    const groupsToRemove = this.originalSelectedGroups.filter(id => !this.selectedGroups.includes(id));
+    
+    // Chain API calls
+    const updatePromises: Promise<any>[] = [];
+    
+    // Add new groups
+    groupsToAdd.forEach(groupId => {
+      updatePromises.push(
+        this.taskService.assignGroup(this.selectedTask!.id!, groupId).toPromise()
+      );
+    });
+    
+    // Remove groups
+    groupsToRemove.forEach(groupId => {
+      updatePromises.push(
+        this.taskService.unassignGroup(this.selectedTask!.id!, groupId).toPromise()
+      );
+    });
+    
+    Promise.all(updatePromises).then(() => {
+      this.loadTasks();
+      this.closeGroupModal();
+      this.messageService.add({
+        severity: 'success', 
+        summary: 'Success', 
+        detail: 'Group assignments updated successfully.'
+      });
+    }).catch((error) => {
+      console.error('Error updating group assignments:', error);
+      this.messageService.add({
+        severity: 'error', 
+        summary: 'Error', 
+        detail: 'Failed to update group assignments.'
+      });
+    }).finally(() => {
+      this.isUpdatingAssignments = false;
     });
   }
 
@@ -341,5 +609,227 @@ export class TaskComponent implements OnInit {
       return '-';
     }
     return new Date(dateString).toLocaleDateString();
+  }
+
+  // Get assigned users for display in view modal
+  getAssignedUsers(task: ITaskData): any[] {
+    if (!task.assignedUserIds || task.assignedUserIds.length === 0) {
+      return [];
+    }
+    return this.availableUsers.filter(user => 
+      task.assignedUserIds!.includes(user.id)
+    );
+  }
+
+  // Get assigned groups for display in view modal
+  getAssignedGroups(task: ITaskData): any[] {
+    // For now, return empty array since we don't have assignedGroupIds in the interface
+    // This can be updated when the backend provides group assignment data
+    return [];
+  }
+
+  // Get users not assigned to the task
+  getUnassignedUsers(task: ITaskData): any[] {
+    if (!task.assignedUserIds) {
+      return this.availableUsers;
+    }
+    return this.availableUsers.filter(user => 
+      !task.assignedUserIds!.includes(user.id)
+    );
+  }
+
+  // Get groups not assigned to the task
+  getUnassignedGroups(task: ITaskData): any[] {
+    // For now, return all groups since we don't have assignedGroupIds
+    return this.availableGroups;
+  }
+
+  // Handle new user selection for assignment
+  onNewUserSelection(event: any): void {
+    this.newUsersToAssign = Array.from(event.target.selectedOptions, (option: any) => option.value);
+  }
+
+  // Handle new group selection for assignment
+  onNewGroupSelection(event: any): void {
+    this.newGroupsToAssign = Array.from(event.target.selectedOptions, (option: any) => option.value);
+  }
+
+  // Check if new users are selected
+  hasNewUsersSelected(): boolean {
+    return this.newUsersToAssign.length > 0;
+  }
+
+  // Check if new groups are selected
+  hasNewGroupsSelected(): boolean {
+    return this.newGroupsToAssign.length > 0;
+  }
+
+  // Unassign a single user
+  unassignUser(userId: string): void {
+    if (!this.selectedTask) return;
+    
+    this.isUpdatingAssignments = true;
+    
+    this.taskService.unassignUser(this.selectedTask.id!, userId).subscribe({
+      next: () => {
+        // Update the selected task data immediately to reflect the change
+        if (this.selectedTask?.assignedUserIds) {
+          this.selectedTask.assignedUserIds = this.selectedTask.assignedUserIds.filter(id => id !== userId);
+        }
+        
+        // Also refresh the task from server to get latest data
+        this.refreshSelectedTask();
+        
+        // Update the main tasks list
+        this.loadTasks();
+        
+        this.messageService.add({
+          severity: 'success', 
+          summary: 'Success', 
+          detail: 'User unassigned successfully.'
+        });
+      },
+      error: (error) => {
+        console.error('Error unassigning user:', error);
+        this.messageService.add({
+          severity: 'error', 
+          summary: 'Error', 
+          detail: 'Failed to unassign user.'
+        });
+      },
+      complete: () => {
+        this.isUpdatingAssignments = false;
+      }
+    });
+  }
+
+  // Refresh the selected task from server
+  refreshSelectedTask(): void {
+    if (!this.selectedTask?.id) return;
+    
+    this.taskService.getTaskById(this.selectedTask.id).subscribe({
+      next: (updatedTask) => {
+        this.selectedTask = {
+          id: updatedTask.id,
+          name: updatedTask.name,
+          description: updatedTask.description,
+          status: updatedTask.status,
+          startAt: updatedTask.startAt,
+          dueAt: updatedTask.dueAt,
+          completedAt: updatedTask.completedAt,
+          assignedUserIds: updatedTask.assignedUserIds,
+          assignedById: updatedTask.assignedById,
+          createdById: updatedTask.createdById,
+          isValidated: updatedTask.isValidated,
+          adminComplete: updatedTask.adminComplete
+        };
+      },
+      error: (error) => {
+        console.error('Error refreshing task:', error);
+      }
+    });
+  }
+
+  // Unassign a single group
+  unassignGroup(groupId: string): void {
+    if (!this.selectedTask) return;
+    
+    this.isUpdatingAssignments = true;
+    
+    this.taskService.unassignGroup(this.selectedTask.id!, groupId).subscribe({
+      next: () => {
+        this.loadTasks();
+        this.messageService.add({
+          severity: 'success', 
+          summary: 'Success', 
+          detail: 'Group unassigned successfully.'
+        });
+      },
+      error: (error) => {
+        console.error('Error unassigning group:', error);
+        this.messageService.add({
+          severity: 'error', 
+          summary: 'Error', 
+          detail: 'Failed to unassign group.'
+        });
+      },
+      complete: () => {
+        this.isUpdatingAssignments = false;
+      }
+    });
+  }
+
+  // Assign selected users
+  assignSelectedUsers(): void {
+    if (!this.selectedTask || this.newUsersToAssign.length === 0) return;
+    
+    this.isUpdatingAssignments = true;
+    
+    const assignPromises = this.newUsersToAssign.map(userId =>
+      this.taskService.assignUser(this.selectedTask!.id!, userId).toPromise()
+    );
+    
+    Promise.all(assignPromises).then(() => {
+      // Update the selected task data immediately
+      if (this.selectedTask?.assignedUserIds) {
+        this.selectedTask.assignedUserIds = [...this.selectedTask.assignedUserIds, ...this.newUsersToAssign];
+      } else if (this.selectedTask) {
+        this.selectedTask.assignedUserIds = [...this.newUsersToAssign];
+      }
+      
+      // Clear the selection
+      this.newUsersToAssign = [];
+      
+      // Refresh task from server
+      this.refreshSelectedTask();
+      
+      // Update the main tasks list
+      this.loadTasks();
+      
+      this.messageService.add({
+        severity: 'success', 
+        summary: 'Success', 
+        detail: 'Users assigned successfully.'
+      });
+    }).catch((error) => {
+      console.error('Error assigning users:', error);
+      this.messageService.add({
+        severity: 'error', 
+        summary: 'Error', 
+        detail: 'Failed to assign users.'
+      });
+    }).finally(() => {
+      this.isUpdatingAssignments = false;
+    });
+  }
+
+  // Assign selected groups
+  assignSelectedGroups(): void {
+    if (!this.selectedTask || this.newGroupsToAssign.length === 0) return;
+    
+    this.isUpdatingAssignments = true;
+    
+    const assignPromises = this.newGroupsToAssign.map(groupId =>
+      this.taskService.assignGroup(this.selectedTask!.id!, groupId).toPromise()
+    );
+    
+    Promise.all(assignPromises).then(() => {
+      this.loadTasks();
+      this.newGroupsToAssign = [];
+      this.messageService.add({
+        severity: 'success', 
+        summary: 'Success', 
+        detail: 'Groups assigned successfully.'
+      });
+    }).catch((error) => {
+      console.error('Error assigning groups:', error);
+      this.messageService.add({
+        severity: 'error', 
+        summary: 'Error', 
+        detail: 'Failed to assign groups.'
+      });
+    }).finally(() => {
+      this.isUpdatingAssignments = false;
+    });
   }
 }

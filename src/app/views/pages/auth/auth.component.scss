@@ -61,6 +61,24 @@
     color: #e53935;
 }
 
+.toggle-panel button {
+    background-color: transparent;
+    border: 1px solid #fff;
+    color: #fff;
+    transition: all 0.3s ease;
+    transform: scale(1);
+}
+
+.toggle-panel button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+.toggle-panel button:active {
+    transform: scale(0.95);
+}
+
 .container form{
     background-color: #fff;
     display: flex;

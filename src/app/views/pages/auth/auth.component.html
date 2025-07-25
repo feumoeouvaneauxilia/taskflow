@@ -81,12 +81,12 @@
       <div class="toggle-panel toggle-left">
         <h1>Welcome Back!</h1>
         <p>Enter your personal details to use all of site features</p>
-        <button class="hidden" (click)="onLoginClick()"><span class="red-accent">Sign In</span></button>
+        <button *ngIf="isActive" (click)="onLoginClick()"><span class="red-accent">Sign In</span></button>
       </div>
       <div class="toggle-panel toggle-right">
         <h1>Hello, Friend!</h1>
         <p>Register with your personal details to use all of site features</p>
-        <button class="hidden" (click)="onRegisterClick()"><span class="red-accent">Sign Up</span></button>
+        <button *ngIf="!isActive" (click)="onRegisterClick()"><span class="red-accent">Sign Up</span></button>
       </div>
     </div>
   </div>
