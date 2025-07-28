@@ -13,6 +13,34 @@
     min-height: 100%;
   }
 
+  // Logo styling
+  .sidebar-brand {
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    .sidebar-brand-full {
+      transition: all 0.3s ease;
+      filter: brightness(1.1);
+      
+      &:hover {
+        filter: brightness(1.2);
+        transform: scale(1.02);
+      }
+    }
+    
+    .sidebar-brand-narrow {
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      
+      &:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+    }
+  }
+
   //.sidebar-nav {
   //  scrollbar-color: var(--cui-gray-500, #444) transparent;
   //}

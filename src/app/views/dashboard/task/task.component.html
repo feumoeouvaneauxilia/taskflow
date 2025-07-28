@@ -83,11 +83,36 @@
                     <svg [cIcon]="icons.cilClock" size="sm" class="ms-1 text-danger"></svg>
                   </div>
                 </th>
-                <th>Assigned By</th>
-                <th>Created By</th>
-                <th>Validated</th>
-                <th>Admin Complete</th>
-                <th>Actions</th>
+                <th>
+                  <div class="d-inline">
+                    Assigned By
+                    <svg [cIcon]="icons.cilUserFollow" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-inline">
+                    Created By
+                    <svg [cIcon]="icons.cilUserPlus" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-inline">
+                    Validated
+                    <svg [cIcon]="icons.cilShieldAlt" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-inline">
+                    Admin Complete
+                    <svg [cIcon]="icons.cilBadge" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
+                <th>
+                  <div class="d-inline">
+                    Actions
+                    <svg [cIcon]="icons.cilSettings" size="sm" class="ms-1 text-danger"></svg>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -242,6 +267,11 @@
             id="startAt"
             formControlName="startAt"
           >
+          <div *ngIf="createTaskForm.get('startAt')?.invalid && createTaskForm.get('startAt')?.touched" class="text-danger mt-1">
+            <small *ngIf="createTaskForm.get('startAt')?.errors?.['dateNotPast']">
+              Start date cannot be in the past
+            </small>
+          </div>
         </c-col>
         
         <c-col md="6" class="mb-3">
@@ -252,6 +282,14 @@
             id="dueAt"
             formControlName="dueAt"
           >
+          <div *ngIf="createTaskForm.get('dueAt')?.invalid && createTaskForm.get('dueAt')?.touched" class="text-danger mt-1">
+            <small *ngIf="createTaskForm.get('dueAt')?.errors?.['dateNotPast']">
+              Due date cannot be in the past
+            </small>
+            <small *ngIf="createTaskForm.get('dueAt')?.errors?.['dueDateAfterStartDate']">
+              Due date must be after start date
+            </small>
+          </div>
         </c-col>
       </c-row>
       

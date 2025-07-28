@@ -1,5 +1,5 @@
 import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { 
   AlignDirective, 
   BorderDirective,
@@ -27,7 +27,7 @@ import {
   FormTextDirective
 } from '@coreui/angular';
 import { IconDirective } from '@coreui/icons-angular';
-import { cilCalendar, cilUser, cilTask, cilCheckCircle, cilClock, cilPencil, cilPeople, cilX, cilMinus } from '@coreui/icons';
+import { cilCalendar, cilUser, cilTask, cilCheckCircle, cilClock, cilPencil, cilPeople, cilX, cilMinus, cilShieldAlt, cilNoteAdd, cilSettings, cilAccountLogout, cilUserPlus, cilUserFollow, cilBadge } from '@coreui/icons';
 import { TaskService } from '../../../services/task/task.service';
 import { UserService } from '../../../services/user/user.service';
 import { AuthService } from '../../../services/auth/auth.service';
@@ -101,7 +101,24 @@ export class TaskComponent implements OnInit {
   totalItems = 0;
   searchTerm = '';
   itemsPerPageOptions = [5, 10, 25, 50];
-  icons = { cilCalendar, cilUser, cilTask, cilCheckCircle, cilClock, cilPencil, cilPeople, cilX, cilMinus };
+  icons = { 
+    cilCalendar, 
+    cilUser, 
+    cilTask, 
+    cilCheckCircle, 
+    cilClock, 
+    cilPencil, 
+    cilPeople, 
+    cilX, 
+    cilMinus, 
+    cilShieldAlt, 
+    cilNoteAdd, 
+    cilSettings, 
+    cilAccountLogout, 
+    cilUserPlus,
+    cilUserFollow,
+    cilBadge
+  };
   showCreateModal = false;
   createTaskForm: FormGroup;
   isCreating = false;
@@ -135,10 +152,42 @@ export class TaskComponent implements OnInit {
     this.createTaskForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
       description: [''],
-      startAt: [''],
-      dueAt: ['']
-    });
+      startAt: ['', [this.dateNotPastValidator]],
+      dueAt: ['', [this.dateNotPastValidator]]
+    }, { validators: [this.dueDateAfterStartDateValidator] });
   }
+
+  // Custom validators
+  dateNotPastValidator(control: AbstractControl): ValidationErrors | null {
+    if (!control.value) return null;
+    
+    const inputDate = new Date(control.value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day
+    inputDate.setHours(0, 0, 0, 0);
+    
+    if (inputDate < today) {
+      return { dateNotPast: { message: 'Date cannot be in the past' } };
+    }
+    
+    return null;
+  }
+
+  dueDateAfterStartDateValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+    const startAt = control.get('startAt');
+    const dueAt = control.get('dueAt');
+    
+    if (!startAt?.value || !dueAt?.value) return null;
+    
+    const startDate = new Date(startAt.value);
+    const dueDate = new Date(dueAt.value);
+    
+    if (dueDate < startDate) {
+      return { dueDateAfterStartDate: { message: 'Due date cannot be before start date' } };
+    }
+    
+    return null;
+  };
 
   ngOnInit(): void {
     this.loadTasks();

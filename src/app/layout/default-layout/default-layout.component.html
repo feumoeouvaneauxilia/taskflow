@@ -10,17 +10,21 @@
     <c-sidebar-brand [routerLink]="[]">
   <!-- Full logo (visible when sidebar is expanded) -->
   <img
-    src="assets/images/Capture.png"
+    src="assets/images/logo_taskflow.png"
     class="sidebar-brand-full"
-    height="150"
-    alt="TaskF"
+    height="80"
+    width="auto"
+    style="max-width: 200px; object-fit: contain;"
+    alt="TaskFlow"
   />
   <!-- Collapsed logo (icon version, visible when sidebar is narrow) -->
   <img
-    src="assets/images/logoT.jpeg"
+    src="assets/images/logo_taskflow.png"
     class="sidebar-brand-narrow"
-    height="32"
-    alt="TaskFlow"
+    height="40"
+    width="40"
+    style="object-fit: cover; border-radius: 6px;"
+    alt="TF"
   />
 </c-sidebar-brand>
   </c-sidebar-header>
@@ -29,11 +33,11 @@
     <c-sidebar-nav [navItems]="navItems" dropdownMode="close" compact />
   </ng-scrollbar>
 
-  @if (!sidebar1.narrow) {
+  <!-- @if (!sidebar1.narrow) {
     <c-sidebar-footer cSidebarToggle="sidebar1" class="border-top d-none d-lg-flex" toggle="unfoldable" style="cursor: pointer;">
       <button cSidebarToggler aria-label="Toggle sidebar fold"></button>
     </c-sidebar-footer>
-  }
+  } -->
 </c-sidebar>
 
 <!--main-->
