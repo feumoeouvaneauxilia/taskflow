@@ -18,7 +18,7 @@ import { MessageService } from 'primeng/api';  // Import MessageService
     HttpClientModule,
     FormsModule,
     SpinnerModule,
-    ToastModule  // Add ToastModule here
+    ToastModule  
   ],
   providers: [MessageService], // Add MessageService provider
   bootstrap: [AppComponent]

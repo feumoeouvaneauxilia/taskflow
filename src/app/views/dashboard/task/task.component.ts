@@ -314,7 +314,7 @@ export class TaskComponent implements OnInit {
       assignedById: userId
     };
 
-    if (roles.includes('admin') || roles.includes('role_admin')) {
+    if (roles.includes('ROLE_ADMIN') || roles.includes('role_admin')) {
       taskData.isValidated = true;
     } else if (roles.length > 0) {
       taskData.isValidated = false;
@@ -672,12 +672,7 @@ export class TaskComponent implements OnInit {
     
     this.taskService.unassignUser(this.selectedTask.id!, userId).subscribe({
       next: () => {
-        // Update the selected task data immediately to reflect the change
-        if (this.selectedTask?.assignedUserIds) {
-          this.selectedTask.assignedUserIds = this.selectedTask.assignedUserIds.filter(id => id !== userId);
-        }
-        
-        // Also refresh the task from server to get latest data
+        // Refresh the selected task from server to get latest data
         this.refreshSelectedTask();
         
         // Update the main tasks list
@@ -770,17 +765,10 @@ export class TaskComponent implements OnInit {
     );
     
     Promise.all(assignPromises).then(() => {
-      // Update the selected task data immediately
-      if (this.selectedTask?.assignedUserIds) {
-        this.selectedTask.assignedUserIds = [...this.selectedTask.assignedUserIds, ...this.newUsersToAssign];
-      } else if (this.selectedTask) {
-        this.selectedTask.assignedUserIds = [...this.newUsersToAssign];
-      }
-      
       // Clear the selection
       this.newUsersToAssign = [];
       
-      // Refresh task from server
+      // Refresh task from server to get the updated assignedUserIds
       this.refreshSelectedTask();
       
       // Update the main tasks list
