@@ -45,4 +45,6 @@ testem.log
 .DS_Store
 Thumbs.db
 
-./firebase-messaging-sw.js
+# Firebase service worker
+src/firebase-messaging-sw.js
+firebase-messaging-sw.js
