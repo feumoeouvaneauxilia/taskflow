@@ -111,7 +111,7 @@ export class DefaultHeaderComponent extends HeaderComponent {
 
   sidebarId = input('sidebar1');
   isModalVisible = false;
-  profileForm: FormGroup;
+  
 
 
   public newMessages = [
