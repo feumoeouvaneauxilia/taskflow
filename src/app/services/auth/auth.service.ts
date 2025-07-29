@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environment/environment';
 import { catchError, Observable, throwError } from 'rxjs';
 import { Router } from '@angular/router';
@@ -214,7 +214,16 @@ logout(): void {
   });
 }
 
-login(credentials: { email: string; password: string }): Observable<any> {
-  return this.http.post<any>(`${environment.baseUrl}/auth/login`, credentials);
+login(credentials: { email: string; password: string }): Observable<{ accessToken: string, refreshToken: string }> {
+  return this.http.post<{ accessToken: string, refreshToken: string }>(
+    `${environment.baseUrl}/auth/login`,
+    credentials
+  ).pipe(
+    catchError((error: HttpErrorResponse) => {
+      // Extract the error message from the backend or fallback
+      const errorMessage = error.error?.message || 'Login failed. Please try again.';
+      return throwError(() => new Error(errorMessage));
+    })
+  );
 }
 }

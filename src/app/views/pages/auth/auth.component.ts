@@ -42,25 +42,25 @@ export class AuthComponent {
   }
 
   onLogin() {
-    if (this.loginForm.invalid) return;
-    
-    this.isLoading = true;
-    this.errorMessage = '';
-    
-    const { email, password } = this.loginForm.value;
-    
-    this.authService.login({ email, password }).subscribe({
-      next: (response: { accessToken: string; refreshToken: string; }) => {
-        this.authService.saveToken(response.accessToken); // This will now also save username
-        this.router.navigate(['/dashboard/dash']);
-      },
-      error: (err: string) => {
-        this.errorMessage = err || 'Login failed. Please check your credentials.';
-        this.isLoading = false;
-      },
-      complete: () => this.isLoading = false
-    });
-  }
+  if (this.loginForm.invalid) return;
+
+  this.isLoading = true;
+  this.errorMessage = '';
+
+  const { email, password } = this.loginForm.value;
+
+  this.authService.login({ email, password }).subscribe({
+    next: (response) => {
+      this.authService.saveToken(response.accessToken);
+      this.router.navigate(['/dashboard/dash']);
+    },
+    error: (err: Error) => {
+      this.isLoading = false;
+      this.errorMessage = err.message; // Uses the structured error from the service
+    },
+    complete: () => this.isLoading = false
+  });
+}
 
   onRegister() {
     if (this.registerForm.invalid) return;
