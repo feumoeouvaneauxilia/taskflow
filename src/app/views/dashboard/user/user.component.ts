@@ -20,6 +20,8 @@ import { cilUser, cilEnvelopeOpen, cilBadge, cilToggleOn, cilToggleOff } from '@
 import { UserService } from '../../../services/user/user.service';
 import { CommonModule } from '@angular/common';
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 
 interface IUserData {
   id?: string;
@@ -32,6 +34,7 @@ interface IUserData {
 @Component({
   selector: 'app-user',
   standalone: true,
+  providers: [MessageService],
   imports: [
     AlignDirective,
     BorderDirective,
@@ -48,7 +51,9 @@ interface IUserData {
     TableDirective,
     FormCheckComponent,
     SpinnerComponent,
-    CommonModule
+    ToastModule, 
+    CommonModule,
+    
   ],
   templateUrl: './user.component.html',
   styleUrl: './user.component.scss',
@@ -72,7 +77,7 @@ export class UserComponent implements OnInit {
   
   icons = { cilUser, cilEnvelopeOpen, cilBadge, cilToggleOn, cilToggleOff };
 
-  constructor(private userService: UserService) {}
+  constructor(private userService: UserService , private messageService: MessageService) {}
 
   ngOnInit(): void {
     this.loadUsers();
@@ -160,18 +165,58 @@ export class UserComponent implements OnInit {
     return Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
   }
 
-  toggleUserStatus(userId: string, currentStatus: boolean): void {
-    this.userService.updateUserStatus(userId, !currentStatus).subscribe(
-      () => {
-        const user = this.users.find(u => u.id === userId);
-        if (user) {
-          user.isActive = !currentStatus;
-        }
-        this.loadUsers();
-      },
-      (error) => console.error('Error updating user status:', error)
-    );
-  }
+  // 
+  confirmationVisible = false;
+confirmationMessage = '';
+
+// toggleUserStatus(userId: string, isActive: boolean): void {
+//   const action$ = isActive
+//     ? this.userService.deactivateUser(userId)
+//     : this.userService.reactivateUser(userId);
+
+//   action$.subscribe({
+//     next: () => {
+//       this.confirmationMessage = isActive
+//         ? 'The user has been Inactivated.'
+//         : 'The user has been Reactivated.';
+//       this.confirmationVisible = true;
+
+//       this.loadUsers(); // Refresh user list
+//       setTimeout(() => this.confirmationVisible = false, 2500); // Auto-hide modal
+//     },
+//     error: (error) => console.error('Status change failed:', error)
+//   });
+// }
+toggleUserStatus(userId: string, isActive: boolean): void {
+  const action$ = isActive
+    ? this.userService.deactivateUser(userId)
+    : this.userService.reactivateUser(userId);
+
+  action$.subscribe({
+    next: () => {
+      const statusLabel = isActive ? 'Inactivated' : 'Reactivated';
+
+      this.messageService.add({
+        severity: isActive ? 'warn' : 'success',
+        summary: 'User Updated',
+        detail: `The user has been ${statusLabel}.`,
+        life: 3000
+      });
+
+      this.loadUsers();
+    },
+    error: (error) => {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Status change failed.',
+        life: 3000
+      });
+
+      console.error('Status change failed:', error);
+    }
+  });
+}
 
   getRoleBadgeColor(role: string): string {
     switch (role.toLowerCase()) {
