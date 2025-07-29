@@ -21,7 +21,7 @@ import { DefaultHeaderComponent } from './layout/default-layout/default-header/d
     FormsModule,
     ReactiveFormsModule,
     SpinnerModule,
-    ToastModule  // Add ToastModule here
+    ToastModule  
   ],
   providers: [MessageService], // Add MessageService provider
   bootstrap: [AppComponent]
