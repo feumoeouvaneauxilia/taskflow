@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AuthService } from '../../../services/auth/auth.service';
+import { NotificationService } from '../../../services/notification/notification.service';
 import { Router } from '@angular/router';
 import { ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -27,6 +28,7 @@ export class AuthComponent {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
+    private notificationService: NotificationService,
     private router: Router
   ) {
     this.loginForm = this.fb.group({
@@ -52,6 +54,8 @@ export class AuthComponent {
     this.authService.login({ email, password }).subscribe({
       next: (response: { accessToken: string; refreshToken: string; }) => {
         this.authService.saveToken(response.accessToken); // This will now also save username
+        // Refresh notifications after successful login
+        this.notificationService.refreshNotifications();
         this.router.navigate(['/dashboard/dash']);
       },
       error: (err: string) => {

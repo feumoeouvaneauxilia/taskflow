@@ -13,10 +13,7 @@
     </button>
   
     <c-header-nav class="d-none d-md-flex ms-auto ">
-      <a cNavLink>
-        <svg cIcon class="my-1" name="cilBell" size="lg"></svg>
-      </a>
-      
+      <ng-container *ngTemplateOutlet="notificationDropdown" />
     </c-header-nav>
 
     <c-header-nav class="ms-auto ms-md-0">
@@ -91,6 +88,98 @@
           <svg cIcon class="me-2" [name]="mode.icon" size="lg"></svg>
           {{ mode.text }}
         </button>
+      }
+    </div>
+  </c-dropdown>
+</ng-template>
+
+<ng-template #notificationDropdown>
+  <c-dropdown [popperOptions]="{ placement: 'bottom-start' }" variant="nav-item">
+    <button 
+      [caret]="false" 
+      cDropdownToggle 
+      class="btn nav-link position-relative"
+      aria-label="Open notifications"
+      (click)="loadNotifications()"
+    >
+      <svg cIcon class="my-1" name="cilBell" size="lg"></svg>
+      @if (unreadCount$ | async; as count) {
+        @if (count > 0) {
+          <c-badge 
+            class="position-absolute top-0 start-100 translate-middle rounded-pill"
+            color="danger"
+            style="font-size: 0.6em; padding: 0.25em 0.4em;"
+          >
+            {{ count > 99 ? '99+' : count }}
+          </c-badge>
+        }
+      }
+    </button>
+    <div cDropdownMenu class="py-0" style="width: 350px; max-height: 400px; overflow-y: auto;">
+      <div class="bg-body-secondary text-body-secondary fw-semibold py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
+        <span>Notifications</span>
+        @if (unreadCount$ | async; as count) {
+          @if (count > 0) {
+            <button 
+              class="btn btn-sm btn-outline-primary"
+              (click)="markAllAsRead()"
+            >
+              Mark all read
+            </button>
+          }
+        }
+      </div>
+      
+      @if (notifications$ | async; as notifications) {
+        @if (notifications.length === 0) {
+          <div class="p-3 text-center text-muted">
+            <svg cIcon name="cilBell" size="xl" class="mb-2"></svg>
+            <p class="mb-0">No notifications yet</p>
+          </div>
+        } @else {
+          @for (notification of notifications.slice(0, 10); track notification.id) {
+            <div 
+              class="dropdown-item-text p-3 border-bottom"
+              [class.bg-light]="!notification.isRead"
+              style="cursor: pointer;"
+              (click)="markAsRead(notification)"
+            >
+              <div class="d-flex align-items-start">
+                <div class="me-3">
+                  <svg 
+                    cIcon 
+                    [name]="getNotificationIcon(notification.type)" 
+                    size="lg"
+                    [class]="'text-' + getNotificationColor(notification.type)"
+                  ></svg>
+                </div>
+                <div class="flex-grow-1 min-width-0">
+                  <h6 class="mb-1 fw-semibold text-truncate" [class.text-muted]="notification.isRead">
+                    {{ notification.title }}
+                  </h6>
+                  <p class="mb-1 small text-muted text-truncate">
+                    {{ notification.message }}
+                  </p>
+                  <small class="text-muted">
+                    {{ formatNotificationTime(notification.createdAt) }}
+                  </small>
+                </div>
+                @if (!notification.isRead) {
+                  <div class="ms-2">
+                    <span class="badge bg-primary rounded-circle" style="width: 8px; height: 8px; padding: 0;"></span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          @if (notifications.length > 10) {
+            <div class="p-2 text-center border-top">
+              <small class="text-muted">
+                Showing 10 of {{ notifications.length }} notifications
+              </small>
+            </div>
+          }
+        }
       }
     </div>
   </c-dropdown>

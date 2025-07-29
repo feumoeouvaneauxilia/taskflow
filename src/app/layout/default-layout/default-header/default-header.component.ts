@@ -1,4 +1,4 @@
-import { NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet, AsyncPipe } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -24,11 +24,14 @@ import {
 
 import { IconDirective } from '@coreui/icons-angular';
 import { AuthService } from '../../../services/auth/auth.service';
+import { NotificationService } from '../../../services/notification/notification.service';
+import { Notification } from '../../../interfaces/notification.interface';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-default-header',
   templateUrl: './default-header.component.html',
-  imports: [ContainerComponent, HeaderTogglerDirective, SidebarToggleDirective, IconDirective, HeaderNavComponent, NavLinkDirective, RouterLink,  NgTemplateOutlet, BreadcrumbRouterComponent, DropdownComponent, DropdownToggleDirective, AvatarComponent, DropdownMenuDirective, DropdownHeaderDirective, DropdownItemDirective, BadgeComponent, DropdownDividerDirective]
+  imports: [ContainerComponent, HeaderTogglerDirective, SidebarToggleDirective, IconDirective, HeaderNavComponent, RouterLink, NgTemplateOutlet, AsyncPipe, BreadcrumbRouterComponent, DropdownComponent, DropdownToggleDirective, AvatarComponent, DropdownMenuDirective, DropdownHeaderDirective, DropdownItemDirective, BadgeComponent, DropdownDividerDirective]
 })
 export class DefaultHeaderComponent extends HeaderComponent {
 
@@ -47,10 +50,13 @@ export class DefaultHeaderComponent extends HeaderComponent {
   });
 
   constructor(
-    private authService: AuthService
+    private authService: AuthService,
+    private notificationService: NotificationService
   ) {
     super();
     this.loadUserName();
+    this.unreadCount$ = this.notificationService.unreadCount$;
+    this.notifications$ = this.notificationService.notifications$;
   }
 
   private loadUserName(): void {
@@ -65,6 +71,36 @@ export class DefaultHeaderComponent extends HeaderComponent {
     // Get first two letters and convert to uppercase
     const initials = this.userName.substring(0, 2).toUpperCase();
     return initials;
+  }
+
+  // Notification methods
+  loadNotifications(): void {
+    if (!this.notificationsLoaded) {
+      this.notificationService.getMyNotifications().subscribe();
+      this.notificationsLoaded = true;
+    }
+  }
+
+  markAsRead(notification: Notification): void {
+    if (!notification.isRead) {
+      this.notificationService.markAsRead(notification.id).subscribe();
+    }
+  }
+
+  markAllAsRead(): void {
+    this.notificationService.markAllAsRead().subscribe();
+  }
+
+  getNotificationIcon(type: string): string {
+    return this.notificationService.getNotificationIcon(type);
+  }
+
+  getNotificationColor(type: string): string {
+    return this.notificationService.getNotificationColor(type);
+  }
+
+  formatNotificationTime(date: Date): string {
+    return this.notificationService.formatNotificationTime(date);
   }
 
   sidebarId = input('sidebar1');
@@ -146,5 +182,10 @@ export class DefaultHeaderComponent extends HeaderComponent {
 
   user = { name: 'User' }; // Replace with actual user fetching logic
   userName: string | null = null;
+
+  // Notification properties
+  unreadCount$: Observable<number>;
+  notifications$: Observable<Notification[]>;
+  notificationsLoaded = false;
 
 }

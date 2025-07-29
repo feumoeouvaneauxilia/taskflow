@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environment/environment';
-import { catchError, Observable, throwError } from 'rxjs';
+import { catchError, Observable, throwError, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { CookieService } from 'ngx-cookie-service';
+import { PushNotificationService } from '../push-notification.service';
 
 interface DecodedToken {
   sub: string;
@@ -22,7 +23,8 @@ export class AuthService {
   constructor(
     private http: HttpClient,
     private router: Router,
-    private cookieService: CookieService
+    private cookieService: CookieService,
+    private pushNotificationService: PushNotificationService
   ) { }
 
   register(data: any): Observable<any> {
@@ -32,12 +34,16 @@ export class AuthService {
 
   saveToken(token: string): void {
     this.cookieService.set('access_token', token);
+    localStorage.setItem('token', token); // Also save to localStorage for push notifications
     
     // Extract and save username from token
     const decodedToken = this.decodeToken(token);
     if (decodedToken && decodedToken.username) {
       localStorage.setItem('username', decodedToken.username);
     }
+
+    // Request push notification permission and register token after login
+    this.pushNotificationService.requestPermission();
   }
 
   getUsername(): string | null {
@@ -99,6 +105,7 @@ logout(): void {
 
   private clearTokens(): void {
     localStorage.removeItem('jwtToken');
+    localStorage.removeItem('token'); // Clear the token used for push notifications
     localStorage.removeItem('username'); // Clear username on logout
     this.cookieService.delete('access_token');
     this.cookieService.deleteAll();

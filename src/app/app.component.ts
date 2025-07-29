@@ -7,10 +7,12 @@ import { delay, filter, map, tap } from 'rxjs/operators';
 import { ColorModeService } from '@coreui/angular';
 import { IconSetService } from '@coreui/icons-angular';
 import { iconSubset } from './icons/icon-subset';
+import { PushNotificationService } from './services/push-notification.service';
 
 @Component({
     selector: 'app-root',
     template: '<router-outlet />',
+    standalone: true,
     imports: [RouterOutlet]
 })
 export class AppComponent implements OnInit {
@@ -23,24 +25,40 @@ export class AppComponent implements OnInit {
 
   readonly #colorModeService = inject(ColorModeService);
   readonly #iconSetService = inject(IconSetService);
+  readonly #pushNotificationService = inject(PushNotificationService);
 
   constructor() {
     this.#titleService.setTitle(this.title);
-    // iconSet singleton
+    // Initialize Firebase push notifications
+    setTimeout(() => {
+      this.#pushNotificationService.requestPermission();
+      this.#pushNotificationService.listenForMessages();
+    }, 1000);
+    
     this.#iconSetService.icons = { ...iconSubset };
     this.#colorModeService.localStorageItemName.set('coreui-free-angular-admin-template-theme-default');
     this.#colorModeService.eventName.set('ColorSchemeChange');
   }
 
   ngOnInit(): void {
-
     this.#router.events.pipe(
-        takeUntilDestroyed(this.#destroyRef)
-      ).subscribe((evt) => {
-      if (!(evt instanceof NavigationEnd)) {
-        return;
-      }
-    });
+      filter((event) => event instanceof NavigationEnd),
+      map(() => {
+        let route: ActivatedRoute = this.#activatedRoute;
+        while (route.firstChild) {
+          route = route.firstChild;
+        }
+        return route;
+      }),
+      filter((route) => route.outlet === 'primary'),
+      map((route) => route.snapshot.data['title']),
+      tap((title) => {
+        const newTitle = title ? `${title} - ${this.title}` : this.title;
+        this.#titleService.setTitle(newTitle);
+      }),
+      delay(1),
+      takeUntilDestroyed(this.#destroyRef)
+    ).subscribe();
 
     this.#activatedRoute.queryParams
       .pipe(
