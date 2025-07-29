@@ -4,12 +4,7 @@ c-avatar {
   font-size: 14px;
 }
 
-// Ensure proper text alignment in avatar
-.avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+
 
 /* Mobile header responsiveness */
 @media (max-width: 768px) {
@@ -60,4 +55,21 @@ c-avatar {
   c-avatar {
     font-size: 11px;
   }
+}
+
+::ng-deep c-modal-body {
+  display: flex;
+  justify-content: flex-end; // Push the form all the way right
+  padding: 1.5rem;
+  overflow-x: auto;
+}
+
+::ng-deep c-modal-body form {
+  width: 100%;
+  max-width: 200px; // 👈 Nearly half of your original 380px
+  background-color: #fff;
+  color: #000;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  box-shadow: 0 0 10px rgba(193, 18, 31, 0.1); // Soft red accent glow
 }

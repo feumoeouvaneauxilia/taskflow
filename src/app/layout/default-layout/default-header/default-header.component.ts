@@ -1,7 +1,8 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-
+import { UserService } from '../../../services/user/user.service';
+import { ReactiveFormsModule } from '@angular/forms';
 import {
   AvatarComponent,
   BadgeComponent,
@@ -17,18 +18,25 @@ import {
   HeaderComponent,
   HeaderNavComponent,
   HeaderTogglerDirective,
-  // NavItemComponent,
+  ModalComponent,
+  ModalHeaderComponent,
+  ModalBodyComponent,
+  ModalFooterComponent,
+ 
+ // NavItemComponent,
   NavLinkDirective,
   SidebarToggleDirective
 } from '@coreui/angular';
 
 import { IconDirective } from '@coreui/icons-angular';
 import { AuthService } from '../../../services/auth/auth.service';
+import { FormBuilder, FormGroup } from '@angular/forms';
 
 @Component({
   selector: 'app-default-header',
   templateUrl: './default-header.component.html',
-  imports: [ContainerComponent, HeaderTogglerDirective, SidebarToggleDirective, IconDirective, HeaderNavComponent, NavLinkDirective, RouterLink,  NgTemplateOutlet, BreadcrumbRouterComponent, DropdownComponent, DropdownToggleDirective, AvatarComponent, DropdownMenuDirective, DropdownHeaderDirective, DropdownItemDirective, BadgeComponent, DropdownDividerDirective]
+  imports: [ReactiveFormsModule,ContainerComponent, HeaderTogglerDirective, SidebarToggleDirective, IconDirective, HeaderNavComponent, NavLinkDirective, RouterLink, NgTemplateOutlet, BreadcrumbRouterComponent, DropdownComponent, DropdownToggleDirective, AvatarComponent, DropdownMenuDirective, DropdownHeaderDirective, DropdownItemDirective, BadgeComponent, DropdownDividerDirective,ModalComponent,
+  ModalHeaderComponent,ModalBodyComponent, ModalFooterComponent,]
 })
 export class DefaultHeaderComponent extends HeaderComponent {
 
@@ -47,11 +55,19 @@ export class DefaultHeaderComponent extends HeaderComponent {
   });
 
   constructor(
-    private authService: AuthService
-  ) {
-    super();
-    this.loadUserName();
-  }
+  private authService: AuthService,
+  private userService: UserService,
+  private fb: FormBuilder
+) {
+  super();
+  this.loadUserName();
+
+  this.profileForm = this.fb.group({
+    name: [''],
+    email: [''],
+    password: ['']
+  });
+}
 
   private loadUserName(): void {
     this.userName = this.authService.getUsername();
@@ -66,8 +82,45 @@ export class DefaultHeaderComponent extends HeaderComponent {
     const initials = this.userName.substring(0, 2).toUpperCase();
     return initials;
   }
+ openProfileModal(): void {
+  const user = this.authService.getCurrentUser();
+  if (user) {
+    this.profileForm.patchValue({
+      name: user.username,
+      email: user.email
+    });
+    this.isModalVisible = true;
+  }
+}
+
+closeProfileModal(): void {
+  this.isModalVisible = false;
+}
+
+onSubmit(): void {
+  const tokenUser = this.authService.getCurrentUser();
+  if (!tokenUser) {
+    return;
+  }
+
+  const updatedUser = this.profileForm.value;
+
+  this.userService.updateUser(tokenUser.id, updatedUser).subscribe({
+    next: () => {
+      this.closeProfileModal();
+      // Optional: Show feedback toast or update local state
+    },
+    error: (err) => {
+      console.error('Update failed:', err);
+      // Optional: Show error alert or message
+    }
+  });
+}
 
   sidebarId = input('sidebar1');
+  isModalVisible = false;
+  profileForm: FormGroup;
+
 
   public newMessages = [
     {
