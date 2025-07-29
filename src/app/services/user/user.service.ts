@@ -30,6 +30,11 @@ export class UserService {
   deactivateUser(id: string | number): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/${id}/deactivate`, {});
   }
+  // PATCH /users/{id}/reactivate
+reactivateUser(id: string | number): Observable<any> {
+  return this.http.patch<any>(`${this.apiUrl}/${id}/reactivate`, {});
+}
+
 
   // PATCH /users/{id}/role
   updateUserRole(id: string | number, role: any): Observable<any> {

@@ -56,12 +56,17 @@
           Account - {{ userName || 'User' }}
         </h6>
       </li>
-      
+
+
       <li>
         <a cDropdownItem routerLink="">
           <svg cIcon class="me-2" name="cilUser" name="cilSettings"></svg>
           Profile Settings
         </a>
+        <a cDropdownItem (click)="openProfileModal()">
+          <svg cIcon class="me-2" name="cilUser"></svg>
+        Profile Settings
+      </a>
       </li>
       
       <li>

@@ -1,7 +1,8 @@
 import { NgTemplateOutlet, AsyncPipe } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-
+import { UserService } from '../../../services/user/user.service';
+import { ReactiveFormsModule } from '@angular/forms';
 import {
   AvatarComponent,
   BadgeComponent,
@@ -17,7 +18,12 @@ import {
   HeaderComponent,
   HeaderNavComponent,
   HeaderTogglerDirective,
-  // NavItemComponent,
+  ModalComponent,
+  ModalHeaderComponent,
+  ModalBodyComponent,
+  ModalFooterComponent,
+ 
+ // NavItemComponent,
   NavLinkDirective,
   SidebarToggleDirective
 } from '@coreui/angular';
@@ -104,6 +110,9 @@ export class DefaultHeaderComponent extends HeaderComponent {
   }
 
   sidebarId = input('sidebar1');
+  isModalVisible = false;
+  profileForm: FormGroup;
+
 
   public newMessages = [
     {

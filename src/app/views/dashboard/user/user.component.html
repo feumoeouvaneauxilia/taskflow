@@ -1,4 +1,6 @@
+
 <c-col xs="12">
+   <p-toast position="top-right"></p-toast> 
   <c-card class="mb-4">
     <c-card-header>
       <strong>User Management</strong>
@@ -70,11 +72,16 @@
                     <svg [cIcon]="icons.cilToggleOn" size="sm" class="ms-1 text-danger"></svg>
                   </div>
                 </th>
+                
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let user of paginatedUsers">
-                <td>{{ user.username }}</td>
+                <!-- <td>{{ user.username }}</td> -->
+                  <td [ngClass]="{ 'inactive-user': !user.isActive }">
+                  {{ user.username }}
+                  <ng-container *ngIf="!user.isActive"> 🔒 </ng-container>
+                </td>
                 <td>{{ user.email }}</td>
                 <td>
                   <div class="d-flex flex-wrap gap-1">
@@ -88,13 +95,20 @@
                   </div>
                 </td>
                 <td>
-                  <c-badge 
+                  <!-- <c-badge 
                     [color]="user.isActive ? 'success' : 'danger'"
                     (click)="toggleUserStatus(user.id!, user.isActive!)"
                     style="cursor: pointer;"
                   >
                     {{ user.isActive ? 'Active' : 'Inactive' }}
-                  </c-badge>
+                  </c-badge> -->
+                  <c-badge
+                      [color]="user.isActive ? 'success' : 'danger'"
+                      (click)="toggleUserStatus(user.id!, user.isActive!)"
+                      style="cursor: pointer;"
+                    >
+                      {{ user.isActive ? 'Active' : 'Inactive' }}
+                </c-badge>
                 </td>
               </tr>
               <tr *ngIf="paginatedUsers.length === 0 && !isLoading">
@@ -154,3 +168,4 @@
     </c-card-body>
   </c-card>
 </c-col>
+

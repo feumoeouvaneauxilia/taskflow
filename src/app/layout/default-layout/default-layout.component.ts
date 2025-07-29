@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { NgScrollbar } from 'ngx-scrollbar';
+import { ReactiveFormsModule } from '@angular/forms';
 
 import { IconDirective } from '@coreui/icons-angular';
 import {
@@ -12,6 +13,8 @@ import {
   SidebarHeaderComponent,
   SidebarNavComponent,
   SidebarToggleDirective,
+  
+
   SidebarTogglerDirective
 } from '@coreui/angular';
 
@@ -44,6 +47,7 @@ function isOverflown(element: HTMLElement) {
     NgScrollbar,
     RouterOutlet,
     RouterLink,
+    ReactiveFormsModule,
     ShadowOnScrollDirective
   ]
 })
