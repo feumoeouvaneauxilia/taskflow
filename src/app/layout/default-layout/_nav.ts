@@ -9,7 +9,7 @@ export const navItems: INavData[] = [
   
   // },
   {
-       name: 'Session',
+       name: 'All Sessions',
       url: '/dashboard/dash',
       iconComponent: { name: 'cil-speedometer' },
 
@@ -20,6 +20,13 @@ export const navItems: INavData[] = [
       iconComponent: { name: 'cil-task' }
 
   },
+
+  {
+      name: 'Group Management',
+      url: '/dashboard/groupe',
+      iconComponent: { name: 'cil-people' },
+  },
+
   {
       name: 'User Management',  
       url: '/dashboard/user',
@@ -32,11 +39,7 @@ export const navItems: INavData[] = [
       url: '/dashboard/stat',
       iconComponent: { name: 'cil-chart' },
   },
-  {
-      name: 'Group Management',
-      url: '/dashboard/groupe',
-      iconComponent: { name: 'cil-people' },
-  },
+  
 
   {
        name: 'Logout',

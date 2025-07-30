@@ -1,9 +1,27 @@
 import { Component, ElementRef, ViewChild, AfterViewInit, HostListener } from '@angular/core';
 import { TaskService } from '../../../services/task/task.service';
+import { UserService } from '../../../services/user/user.service';
+import { GroupService, Group as GroupInterface } from '../../../services/group/group.service';
 import { FormsModule } from '@angular/forms'; 
+
 interface Task {
+  id: string;
   name: string;
+  status: string;
+  assignedUserIds?: string[];
   // ...other properties...
+}
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+}
+
+interface Group {
+  id: string;
+  name: string;
+  members?: User[];
 }
 
 interface Node {
@@ -11,6 +29,11 @@ interface Node {
   x: number;
   y: number;
   label: string;
+  type: 'task' | 'user' | 'group';
+  data: Task | User | Group;
+  radius: number;
+  color: string;
+  shadowColor: string;
 }
 
 @Component({
@@ -24,52 +47,203 @@ export class DashComponent implements AfterViewInit {
 
   nodes: Node[] = [];
   selectedNode: Node | null = null;
+  hoveredNode: Node | null = null;
   isPanning = false;
   lastMouseX = 0;
   lastMouseY = 0;
   offsetX = 0;
   offsetY = 0;
   scale = 1;
+  minScale = 0.3;
+  maxScale = 3.0;
+  
+  // Animation properties
+  animationId: number | null = null;
+  isAnimating = false;
 
-  readonly NODE_RADIUS = 30;
-  readonly NODE_COLOR = '#4299e1';
-  readonly NODE_BORDER_COLOR = '#2b6cb0';
-  readonly NODE_TEXT_COLOR = '#ffffff';
-  readonly NODE_HIGHLIGHT_COLOR = '#f6ad55';
+  // Premium color palette with high contrast
+  readonly COLORS = {
+    task: {
+      primary: '#FF5722', // Deep Orange - vibrant and distinct
+      shadow: '#D32F2F',
+      text: '#FFFFFF'     // White text for better visibility
+    },
+    user: {
+      primary: '#00BCD4', // Cyan - bright and professional
+      shadow: '#0097A7',
+      text: '#FFFFFF'     // White text for better visibility
+    },
+    group: {
+      primary: '#9C27B0', // Purple - royal and distinctive
+      shadow: '#7B1FA2',
+      text: '#FFFFFF'     // White text for better visibility
+    },
+    highlight: '#FFC107', // Amber - bright selection color
+    background: '#121212' // Pure dark background
+  };
 
-  constructor(private taskService: TaskService) {}
+  readonly NODE_SIZES = {
+    task: 35,
+    user: 30,
+    group: 45
+  };
+
+  constructor(
+    private taskService: TaskService,
+    private userService: UserService,
+    private groupService: GroupService
+  ) {}
 
   ngAfterViewInit() {
     this.resizeCanvas();
     this.attachCanvasEvents();
-    this.loadTasks();
+    this.loadData();
   }
 
   @HostListener('window:resize')
   resizeCanvas() {
     const canvas = this.canvasRef.nativeElement;
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+    const rect = canvas.getBoundingClientRect();
+    
+    console.log('Resizing canvas...');
+    console.log('Canvas element:', canvas);
+    console.log('Canvas bounding rect:', rect);
+    console.log('Canvas offsetWidth:', canvas.offsetWidth, 'offsetHeight:', canvas.offsetHeight);
+    console.log('Canvas computed style display:', getComputedStyle(canvas).display);
+    console.log('Canvas computed style visibility:', getComputedStyle(canvas).visibility);
+    
+    // Get device pixel ratio for crisp rendering on high-DPI displays
+    const dpr = window.devicePixelRatio || 1;
+    
+    // Set actual size in memory (scaled up for high-DPI)
+    canvas.width = canvas.offsetWidth * dpr;
+    canvas.height = canvas.offsetHeight * dpr;
+    
+    // Scale the canvas back down using CSS
+    canvas.style.width = canvas.offsetWidth + 'px';
+    canvas.style.height = canvas.offsetHeight + 'px';
+    
+    // Scale the drawing context so everything draws at correct size
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(dpr, dpr);
+      
+      // Enable high-quality rendering
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
+    
+    console.log('Canvas size set to:', canvas.width, 'x', canvas.height, 'with DPR:', dpr);
+    
     this.draw();
   }
 
-  loadTasks() {
-    this.taskService.getTasks().subscribe((tasks: Task[]) => {
-      // Place nodes in a circle for demo, or center if only one
-      const centerX = this.canvasRef.nativeElement.width / 2;
-      const centerY = this.canvasRef.nativeElement.height / 2;
-      const radius = 120;
-      this.nodes = tasks.map((task, i) => {
-        const angle = (2 * Math.PI * i) / Math.max(tasks.length, 1);
-        return {
-          id: `task_${i}`,
-          x: centerX + (tasks.length > 1 ? radius * Math.cos(angle) : 0),
-          y: centerY + (tasks.length > 1 ? radius * Math.sin(angle) : 0),
-          label: task.name
-        };
+  async loadData() {
+    try {
+      console.log('Loading dashboard data...');
+      
+      // Load all data concurrently with proper error handling
+      const results = await Promise.allSettled([
+        this.taskService.getTasks().toPromise(),
+        this.userService.getUsers().toPromise(),
+        this.groupService.getAllGroups().toPromise()
+      ]);
+
+      const tasks = results[0].status === 'fulfilled' ? results[0].value || [] : [];
+      const users = results[1].status === 'fulfilled' ? results[1].value || [] : [];
+      const groups = results[2].status === 'fulfilled' ? results[2].value || [] : [];
+
+      console.log('Loaded data:', { tasks, users, groups });
+      console.log('Tasks count:', tasks.length);
+      console.log('Users count:', users.length);
+      console.log('Groups count:', groups.length);
+
+      // Create dummy data if no real data is available
+      if (tasks.length === 0 && users.length === 0 && groups.length === 0) {
+        console.log('No data found, creating dummy data for demonstration');
+        this.createDummyData();
+      } else {
+        this.createNodes(tasks, users, groups);
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      console.log('Creating dummy data due to error');
+      this.createDummyData();
+    }
+  }
+
+  createDummyData() {
+    const dummyTasks: Task[] = [
+      { id: '1', name: 'Design UI', status: 'In Progress', assignedUserIds: ['user1'] },
+      { id: '2', name: 'Backend API', status: 'Pending', assignedUserIds: ['user2'] },
+      { id: '3', name: 'Testing', status: 'Completed', assignedUserIds: ['user1', 'user2'] }
+    ];
+
+    const dummyUsers: User[] = [
+      { id: 'user1', username: 'Alice', email: 'alice@example.com' },
+      { id: 'user2', username: 'Bob', email: 'bob@example.com' },
+      { id: 'user3', username: 'Charlie', email: 'charlie@example.com' }
+    ];
+
+    const dummyGroups: GroupInterface[] = [
+      { id: 'group1', name: 'Developers', memberIds: ['user1', 'user2'], managerId: 'user1', description: 'Dev team', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      { id: 'group2', name: 'Designers', memberIds: ['user3'], managerId: 'user3', description: 'Design team', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+    ];
+
+    console.log('Creating nodes with dummy data');
+    this.createNodes(dummyTasks, dummyUsers, dummyGroups);
+  }
+
+  createNodes(tasks: Task[], users: User[], groups: GroupInterface[]) {
+    const canvas = this.canvasRef.nativeElement;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    
+    console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+    console.log('Center point:', centerX, centerY);
+    
+    this.nodes = [];
+    const allItems = [
+      ...tasks.map(task => ({ item: task, type: 'task' as const })),
+      ...users.map(user => ({ item: user, type: 'user' as const })),
+      ...groups.map(group => ({ item: { ...group, members: [] }, type: 'group' as const }))
+    ];
+
+    console.log('Total items to create nodes for:', allItems.length);
+
+    // Arrange nodes in a spiral pattern for better distribution
+    allItems.forEach(({ item, type }, index) => {
+      const angle = (index * 2.4) + (index * 0.5); // Spiral angle
+      const radius = 80 + (index * 15); // Increasing radius
+      const maxRadius = Math.min(canvas.width, canvas.height) * 0.3;
+      const finalRadius = Math.min(radius, maxRadius);
+
+      const node: Node = {
+        id: `${type}_${item.id}`,
+        x: centerX + finalRadius * Math.cos(angle),
+        y: centerY + finalRadius * Math.sin(angle),
+        label: type === 'user' ? (item as User).username : item.name,
+        type: type,
+        data: item,
+        radius: this.NODE_SIZES[type],
+        color: this.COLORS[type].primary,
+        shadowColor: this.COLORS[type].shadow
+      };
+
+      console.log(`Created node ${index}:`, {
+        id: node.id,
+        label: node.label,
+        type: node.type,
+        position: `(${node.x}, ${node.y})`,
+        radius: node.radius,
+        color: node.color
       });
-      this.draw();
+
+      this.nodes.push(node);
     });
+
+    console.log('Total nodes created:', this.nodes.length);
+    this.draw();
   }
 
   attachCanvasEvents() {
@@ -90,7 +264,7 @@ export class DashComponent implements AfterViewInit {
       for (let i = this.nodes.length - 1; i >= 0; i--) {
         const node = this.nodes[i];
         const dist = Math.sqrt(Math.pow(worldX - node.x, 2) + Math.pow(worldY - node.y, 2));
-        if (dist < this.NODE_RADIUS) {
+        if (dist < node.radius) {
           this.selectedNode = node;
           this.nodes.splice(i, 1);
           this.nodes.push(node);
@@ -105,15 +279,67 @@ export class DashComponent implements AfterViewInit {
       this.lastMouseY = mouseY;
     });
 
+    canvas.addEventListener('mouseleave', () => {
+      this.selectedNode = null;
+      this.hoveredNode = null;
+      this.isPanning = false;
+      canvas.classList.remove('grabbing');
+      this.draw();
+    });
+
+    // Add zoom functionality
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const { x: mouseX, y: mouseY } = getMouse(e);
+      
+      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+      const newScale = Math.max(this.minScale, Math.min(this.maxScale, this.scale * zoomFactor));
+      
+      if (newScale !== this.scale) {
+        // Zoom towards mouse position
+        const worldX = (mouseX - this.offsetX) / this.scale;
+        const worldY = (mouseY - this.offsetY) / this.scale;
+        
+        this.scale = newScale;
+        this.offsetX = mouseX - worldX * this.scale;
+        this.offsetY = mouseY - worldY * this.scale;
+        
+        this.draw();
+      }
+    });
+
+    // Add hover detection
     canvas.addEventListener('mousemove', (e) => {
       const { x: mouseX, y: mouseY } = getMouse(e);
+      
       if (this.selectedNode) {
         this.selectedNode.x += (mouseX - this.lastMouseX) / this.scale;
         this.selectedNode.y += (mouseY - this.lastMouseY) / this.scale;
       } else if (this.isPanning) {
         this.offsetX += (mouseX - this.lastMouseX);
         this.offsetY += (mouseY - this.lastMouseY);
+      } else {
+        // Check for hover
+        const worldX = (mouseX - this.offsetX) / this.scale;
+        const worldY = (mouseY - this.offsetY) / this.scale;
+        let hoveredNode = null;
+        
+        for (let i = this.nodes.length - 1; i >= 0; i--) {
+          const node = this.nodes[i];
+          const dist = Math.sqrt(Math.pow(worldX - node.x, 2) + Math.pow(worldY - node.y, 2));
+          if (dist < node.radius) {
+            hoveredNode = node;
+            break;
+          }
+        }
+        
+        if (hoveredNode !== this.hoveredNode) {
+          this.hoveredNode = hoveredNode;
+          canvas.style.cursor = hoveredNode ? 'pointer' : 'grab';
+          this.draw();
+        }
       }
+      
       this.lastMouseX = mouseX;
       this.lastMouseY = mouseY;
       this.draw();
@@ -124,43 +350,341 @@ export class DashComponent implements AfterViewInit {
       this.isPanning = false;
       canvas.classList.remove('grabbing');
     });
-
-    canvas.addEventListener('mouseleave', () => {
-      this.selectedNode = null;
-      this.isPanning = false;
-      canvas.classList.remove('grabbing');
-    });
   }
 
 
 
   drawNode(ctx: CanvasRenderingContext2D, node: Node, isSelected: boolean) {
+    console.log('Drawing node:', node.label, 'color:', node.color, 'position:', node.x, node.y, 'radius:', node.radius, 'type:', node.type);
+    
+    const isHovered = node === this.hoveredNode;
+    const effectiveRadius = isHovered ? node.radius * 1.1 : node.radius;
+    
+    // Save context for shadow
+    ctx.save();
+    
+    // Add modern shadow effect (equivalent to box-shadow)
+    if (!isSelected) {
+      ctx.shadowColor = isHovered ? 'rgba(60, 64, 67, 0.4)' : 'rgba(60, 64, 67, 0.3)';
+      ctx.shadowBlur = isHovered ? 8 : 2;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = isHovered ? 3 : 1;
+    }
+    
+    // Draw main circle with premium gradient effect
     ctx.beginPath();
-    ctx.arc(node.x, node.y, this.NODE_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = isSelected ? this.NODE_HIGHLIGHT_COLOR : this.NODE_COLOR;
+    ctx.arc(node.x, node.y, effectiveRadius, 0, Math.PI * 2);
+    
+    // Create radial gradient for premium 3D effect
+    const gradient = ctx.createRadialGradient(
+      node.x - effectiveRadius * 0.3, 
+      node.y - effectiveRadius * 0.3, 
+      0,
+      node.x, 
+      node.y, 
+      effectiveRadius
+    );
+    
+    if (isSelected) {
+      gradient.addColorStop(0, this.lightenColor(this.COLORS.highlight, 0.3));
+      gradient.addColorStop(1, this.COLORS.highlight);
+      ctx.fillStyle = gradient;
+    } else if (isHovered) {
+      gradient.addColorStop(0, this.lightenColor(node.color, 0.4));
+      gradient.addColorStop(1, this.lightenColor(node.color, -0.1));
+      ctx.fillStyle = gradient;
+    } else {
+      gradient.addColorStop(0, this.lightenColor(node.color, 0.3));
+      gradient.addColorStop(1, this.lightenColor(node.color, -0.2));
+      ctx.fillStyle = gradient;
+    }
+    
     ctx.fill();
-    ctx.strokeStyle = this.NODE_BORDER_COLOR;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    ctx.shadowColor = 'transparent'; // Remove shadow for border
+    
+    // Add premium border with glow effect
+    ctx.strokeStyle = isSelected ? '#FFD700' : // Gold for selection
+                     isHovered ? this.lightenColor(node.color, 0.5) : 
+                     this.lightenColor(node.color, 0.2);
+    ctx.lineWidth = isSelected ? 3 : isHovered ? 2.5 : 2;
+    
+    // Add glow effect for selected/hovered nodes
+    if (isSelected || isHovered) {
+      ctx.save();
+      ctx.shadowColor = isSelected ? '#FFD700' : node.color;
+      ctx.shadowBlur = isSelected ? 15 : 8;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.stroke();
+    }
+    
     ctx.closePath();
-    ctx.fillStyle = this.NODE_TEXT_COLOR;
-    ctx.font = '14px Inter, sans-serif';
+    
+    // Restore context
+    ctx.restore();
+    
+    // Add secondary shadow layer for depth
+    if (!isSelected && isHovered) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(60, 64, 67, 0.15)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 6;
+      
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, effectiveRadius, 0, Math.PI * 2);
+      ctx.fillStyle = node.color;
+      ctx.fill();
+      ctx.restore();
+    }
+    
+    // Premium text styling with crystal clear rendering
+    ctx.fillStyle = this.COLORS[node.type].text;
+    ctx.font = `500 ${this.getFontSize(node)}px "Poppins", system-ui, -apple-system, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(node.label, node.x, node.y);
+    
+    // Enable high-quality text rendering
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
+    // Pixel-perfect text positioning for crisp rendering
+    const textX = Math.round(node.x);
+    const textY = Math.round(node.y - 1);
+    
+    // Add subtle stroke for better text visibility and sharpness
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.miterLimit = 2;
+    
+    // Handle text overflow with premium styling
+    const maxWidth = effectiveRadius * 1.6;
+    let text = node.label;
+    
+    // Truncate text if too long
+    while (ctx.measureText(text).width > maxWidth && text.length > 3) {
+      text = text.slice(0, -1);
+    }
+    if (text !== node.label && text.length > 3) {
+      text = text.slice(0, -3) + '...';
+    }
+    
+    // Draw text stroke first for sharp contrast
+    ctx.strokeText(text, textX, textY);
+    
+    // Draw the filled text for crisp, clear rendering
+    ctx.fillText(text, textX, textY);
+    ctx.restore(); // Restore context
+    
+    // Add type indicator for groups and users
+    if (node.type === 'group') {
+      this.drawGroupIndicator(ctx, node);
+    } else if (node.type === 'user') {
+      this.drawUserIndicator(ctx, node);
+    }
+    
+    // Draw tooltip for hovered node
+    if (isHovered) {
+      this.drawTooltip(ctx, node);
+    }
+  }
+
+  private lightenColor(color: string, amount: number): string {
+    // Simple color lightening function
+    const num = parseInt(color.replace("#", ""), 16);
+    const amt = Math.round(2.55 * amount * 100);
+    const R = (num >> 16) + amt;
+    const G = (num >> 8 & 0x00FF) + amt;
+    const B = (num & 0x0000FF) + amt;
+    return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+      (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+      (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+  }
+
+  private getFontSize(node: Node): number {
+    switch (node.type) {
+      case 'group': return 11;
+      case 'task': return 10;
+      case 'user': return 9;
+      default: return 10;
+    }
+  }
+
+  private drawGroupIndicator(ctx: CanvasRenderingContext2D, node: Node) {
+    const group = node.data as GroupInterface;
+    const memberCount = group.memberIds?.length || 0;
+    
+    if (memberCount > 0) {
+      // Small badge showing member count
+      const badgeX = node.x + node.radius - 8;
+      const badgeY = node.y - node.radius + 8;
+      
+      ctx.fillStyle = '#ef4444'; // Red badge
+      ctx.beginPath();
+      ctx.arc(badgeX, badgeY, 8, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '600 9px Poppins, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(memberCount.toString(), badgeX, badgeY + 1);
+    }
+  }
+
+  private drawUserIndicator(ctx: CanvasRenderingContext2D, node: Node) {
+    // Small user icon indicator
+    const iconX = node.x + node.radius - 6;
+    const iconY = node.y - node.radius + 6;
+    
+    ctx.fillStyle = '#10b981'; // Green indicator
+    ctx.beginPath();
+    ctx.arc(iconX, iconY, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  private drawTooltip(ctx: CanvasRenderingContext2D, node: Node) {
+    const tooltipX = node.x + node.radius + 15;
+    const tooltipY = node.y - 20;
+    const padding = 8;
+    
+    // Prepare tooltip text
+    let tooltipText = '';
+    if (node.type === 'task') {
+      const task = node.data as Task;
+      tooltipText = `Task: ${task.name}\nStatus: ${task.status}`;
+      if (task.assignedUserIds && task.assignedUserIds.length > 0) {
+        tooltipText += `\nAssigned: ${task.assignedUserIds.length} users`;
+      }
+    } else if (node.type === 'user') {
+      const user = node.data as User;
+      tooltipText = `User: ${user.username}\nEmail: ${user.email}`;
+    } else if (node.type === 'group') {
+      const group = node.data as GroupInterface;
+      tooltipText = `Group: ${group.name}`;
+      if (group.memberIds && group.memberIds.length > 0) {
+        tooltipText += `\nMembers: ${group.memberIds.length}`;
+      }
+    }
+    
+    const lines = tooltipText.split('\n');
+    const lineHeight = 16;
+    const tooltipWidth = Math.max(...lines.map(line => ctx.measureText(line).width)) + padding * 2;
+    const tooltipHeight = lines.length * lineHeight + padding * 2;
+    
+    // Draw tooltip background with modern styling
+    ctx.save();
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.95)';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 4;
+    
+    this.roundRect(ctx, tooltipX, tooltipY, tooltipWidth, tooltipHeight, 8);
+    ctx.fill();
+    
+    // Draw tooltip border
+    ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+    
+    // Draw tooltip text
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '400 12px Poppins, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    
+    lines.forEach((line, index) => {
+      ctx.fillText(line, tooltipX + padding, tooltipY + padding + index * lineHeight);
+    });
+  }
+
+  private roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
   }
 
   draw() {
     const canvas = this.canvasRef.nativeElement;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!ctx) {
+      console.error('Could not get canvas context');
+      return;
+    }
+    
+    console.log('Drawing canvas with', this.nodes.length, 'nodes');
+    console.log('Canvas size:', canvas.width, 'x', canvas.height);
+    console.log('Scale:', this.scale, 'Offset:', this.offsetX, this.offsetY);
+    
+    // Clear canvas with proper dimensions
+    const dpr = window.devicePixelRatio || 1;
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+    
+    // Enable anti-aliasing for smooth rendering
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
     ctx.save();
     ctx.translate(this.offsetX, this.offsetY);
     ctx.scale(this.scale, this.scale);
-    this.nodes.forEach(node => {
+    
+    // Draw connections first (behind nodes)
+    this.drawConnections(ctx);
+    
+    // Draw nodes
+    this.nodes.forEach((node, index) => {
+      console.log(`Drawing node ${index}:`, node.label, 'at', node.x, node.y);
       this.drawNode(ctx, node, node === this.selectedNode);
     });
+    
+    ctx.restore();
+    
+    console.log('Finished drawing');
+  }
+
+  private drawConnections(ctx: CanvasRenderingContext2D) {
+    // Draw connections between tasks and assigned users/groups
+    this.nodes.forEach(taskNode => {
+      if (taskNode.type === 'task') {
+        const task = taskNode.data as Task;
+        if (task.assignedUserIds && task.assignedUserIds.length > 0) {
+          task.assignedUserIds.forEach(userId => {
+            const userNode = this.nodes.find(n => n.type === 'user' && n.data.id === userId);
+            if (userNode) {
+              this.drawConnection(ctx, taskNode, userNode, '#06b6d4', 0.3);
+            }
+          });
+        }
+      }
+    });
+  }
+
+  private drawConnection(ctx: CanvasRenderingContext2D, node1: Node, node2: Node, color: string, opacity: number) {
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]); // Dashed line
+    
+    ctx.beginPath();
+    ctx.moveTo(node1.x, node1.y);
+    ctx.lineTo(node2.x, node2.y);
+    ctx.stroke();
+    
     ctx.restore();
   }
 }

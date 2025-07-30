@@ -1,35 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .graph-canvas-full {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: #1a202c;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
   z-index: 0;
+  overflow: hidden;
 }
+
 canvas {
-  background-color: #efeff0;
+  background: transparent;
   display: block;
-  border-radius: 0.5rem;
+  border-radius: 0;
   width: 100vw;
   height: 100vh;
   cursor: grab;
+  font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  // Add subtle noise texture for depth
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.02;
+    background-image: 
+      radial-gradient(circle at 25px 25px, rgba(255,255,255,0.2) 2%, transparent 0%), 
+      radial-gradient(circle at 75px 75px, rgba(255,255,255,0.1) 1%, transparent 0%);
+    background-size: 50px 50px;
+    pointer-events: none;
+  }
 }
+
 canvas.grabbing {
   cursor: grabbing;
 }
+
+// Modern scrollbar styling
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
-  background: #2d3748;
+  background: rgba(30, 41, 59, 0.4);
   border-radius: 10px;
+  backdrop-filter: blur(10px);
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #4a5568;
+  background: linear-gradient(180deg, #64748b 0%, #475569 100%);
   border-radius: 10px;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  
+  &:hover {
+    background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+  }
+  
+  &:active {
+    background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+  }
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #6a768f;
+
+// Add floating animation for subtle movement
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+// Optional: Add a subtle grid pattern overlay
+.graph-canvas-full::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(100, 116, 139, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 116, 139, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+// Responsive design for smaller screens
+@media (max-width: 768px) {
+  canvas {
+    font-size: 12px;
+  }
+}
+
+// Dark mode enhancements
+@media (prefers-color-scheme: dark) {
+  .graph-canvas-full {
+    background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%);
+  }
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+  .graph-canvas-full {
+    background: #000000;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #ffffff;
+    border: 2px solid #000000;
+  }
 }
