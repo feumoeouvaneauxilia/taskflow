@@ -19,7 +19,7 @@ import {
 } from '@coreui/angular';
 
 import { DefaultFooterComponent, DefaultHeaderComponent } from './';
-import { navItems } from './_nav';
+import { navItems, logoutItem } from './_nav';
 
 function isOverflown(element: HTMLElement) {
   return (
@@ -53,4 +53,5 @@ function isOverflown(element: HTMLElement) {
 })
 export class DefaultLayoutComponent {
   public navItems = [...navItems];
+  public logoutItem = logoutItem;
 }

@@ -39,12 +39,10 @@ export const navItems: INavData[] = [
       url: '/dashboard/stat',
       iconComponent: { name: 'cil-chart' },
   },
-  
-
-  {
-       name: 'Logout',
-      url: '/dashboard/logout',
-      iconComponent: { name: 'cil-account-logout' },
-  },
-
 ];
+
+export const logoutItem: INavData = {
+  name: 'Logout',
+  url: '/dashboard/logout',
+  iconComponent: { name: 'cil-account-logout' },
+};

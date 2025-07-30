@@ -12,26 +12,33 @@
   <img
     src="assets/images/logo_taskflow.png"
     class="sidebar-brand-full"
-    height="80"
+    height="60"
     width="auto"
-    style="max-width: 200px; object-fit: contain;"
+    style="max-width: 150px; object-fit: contain;"
     alt="TaskFlow"
   />
   <!-- Collapsed logo (icon version, visible when sidebar is narrow) -->
   <img
     src="assets/images/logo_taskflow.png"
     class="sidebar-brand-narrow"
-    height="40"
-    width="40"
+    height="35"
+    width="35"
     style="object-fit: cover; border-radius: 6px;"
     alt="TF"
   />
 </c-sidebar-brand>
   </c-sidebar-header>
 
-  <ng-scrollbar pointerEventsMethod="scrollbar" visibility="hover">
-    <c-sidebar-nav [navItems]="navItems" dropdownMode="close" compact />
-  </ng-scrollbar>
+  <div class="d-flex flex-column h-100">
+    <ng-scrollbar pointerEventsMethod="scrollbar" visibility="hover" class="flex-grow-1">
+      <c-sidebar-nav [navItems]="navItems" dropdownMode="close" compact />
+    </ng-scrollbar>
+    
+    <!-- Logout at the bottom -->
+    <div class="mt-auto border-top">
+      <c-sidebar-nav [navItems]="[logoutItem]" dropdownMode="close" compact />
+    </div>
+  </div>
 
   <!-- @if (!sidebar1.narrow) {
     <c-sidebar-footer cSidebarToggle="sidebar1" class="border-top d-none d-lg-flex" toggle="unfoldable" style="cursor: pointer;">
