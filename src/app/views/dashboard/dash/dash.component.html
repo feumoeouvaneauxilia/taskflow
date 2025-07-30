@@ -1,6 +1,8 @@
 <div class="dashboard-container">
   <div class="graph-canvas-container" [class.panel-open]="isPanelOpen">
-    <canvas #graphCanvas></canvas>
+    <canvas #graphCanvas 
+            [class.dragging]="isDragging"
+            [class.drag-over]="dropTargetNode !== null"></canvas>
   </div>
   
   <!-- Panel Backdrop (click to close) -->

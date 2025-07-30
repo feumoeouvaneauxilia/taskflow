@@ -1,7 +1,7 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, HostListener } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, HostListener, ChangeDetectorRef } from '@angular/core';
 import { TaskService } from '../../../services/task/task.service';
 import { UserService } from '../../../services/user/user.service';
-import { GroupService, Group as GroupInterface } from '../../../services/group/group.service';
+import { GroupService, Group as GroupInterface, AddMembersDto } from '../../../services/group/group.service';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common'; 
 
@@ -84,6 +84,11 @@ export class DashComponent implements AfterViewInit {
   selectedNodeDetails: Node | null = null;
   panelWidth = 350;
 
+  // Drag and Drop properties
+  isDragging = false;
+  draggedNode: Node | null = null;
+  dropTargetNode: Node | null = null;
+
   // Premium color palette with high contrast
   readonly COLORS = {
     task: {
@@ -114,7 +119,8 @@ export class DashComponent implements AfterViewInit {
   constructor(
     private taskService: TaskService,
     private userService: UserService,
-    private groupService: GroupService
+    private groupService: GroupService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngAfterViewInit() {
@@ -304,6 +310,7 @@ export class DashComponent implements AfterViewInit {
       const worldX = (mouseX - this.offsetX) / this.scale;
       const worldY = (mouseY - this.offsetY) / this.scale;
       this.selectedNode = null;
+      
       for (let i = this.nodes.length - 1; i >= 0; i--) {
         const node = this.nodes[i];
         const dist = Math.sqrt(Math.pow(worldX - node.x, 2) + Math.pow(worldY - node.y, 2));
@@ -311,9 +318,17 @@ export class DashComponent implements AfterViewInit {
           this.selectedNode = node;
           this.nodes.splice(i, 1);
           this.nodes.push(node);
+          
+          // Start drag operation for task and user nodes
+          if (node.type === 'task' || node.type === 'user') {
+            this.draggedNode = node;
+            this.isDragging = true;
+            canvas.style.cursor = 'grabbing';
+          }
           break;
         }
       }
+      
       if (!this.selectedNode) {
         this.isPanning = true;
         canvas.classList.add('grabbing');
@@ -371,12 +386,45 @@ export class DashComponent implements AfterViewInit {
     canvas.addEventListener('mousemove', (e) => {
       const { x: mouseX, y: mouseY } = getMouse(e);
       
-      if (this.selectedNode) {
+      if (this.selectedNode && !this.isDragging) {
         this.selectedNode.x += (mouseX - this.lastMouseX) / this.scale;
         this.selectedNode.y += (mouseY - this.lastMouseY) / this.scale;
       } else if (this.isPanning) {
         this.offsetX += (mouseX - this.lastMouseX);
         this.offsetY += (mouseY - this.lastMouseY);
+      } else if (this.isDragging && this.draggedNode) {
+        // Update dragged node position
+        this.draggedNode.x += (mouseX - this.lastMouseX) / this.scale;
+        this.draggedNode.y += (mouseY - this.lastMouseY) / this.scale;
+        
+        // Check for valid drop targets based on drag type
+        const worldX = (mouseX - this.offsetX) / this.scale;
+        const worldY = (mouseY - this.offsetY) / this.scale;
+        let potentialDropTarget: Node | null = null;
+        
+        for (let i = this.nodes.length - 1; i >= 0; i--) {
+          const node = this.nodes[i];
+          if (node !== this.draggedNode) {
+            const dist = Math.sqrt(Math.pow(worldX - node.x, 2) + Math.pow(worldY - node.y, 2));
+            if (dist < node.radius + 20) { // Add some tolerance for easier dropping
+              // Task can be dropped on user or group
+              if (this.draggedNode.type === 'task' && (node.type === 'user' || node.type === 'group')) {
+                potentialDropTarget = node;
+                break;
+              }
+              // User can be dropped on group
+              else if (this.draggedNode.type === 'user' && node.type === 'group') {
+                potentialDropTarget = node;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (potentialDropTarget !== this.dropTargetNode) {
+          this.dropTargetNode = potentialDropTarget;
+          canvas.style.cursor = potentialDropTarget ? 'copy' : 'grabbing';
+        }
       } else {
         // Check for hover
         const worldX = (mouseX - this.offsetX) / this.scale;
@@ -405,9 +453,20 @@ export class DashComponent implements AfterViewInit {
     });
 
     canvas.addEventListener('mouseup', () => {
+      // Handle drop operation
+      if (this.isDragging && this.draggedNode && this.dropTargetNode) {
+        this.handleDragAndDrop(this.draggedNode, this.dropTargetNode);
+      }
+      
+      // Reset drag state
       this.selectedNode = null;
       this.isPanning = false;
+      this.isDragging = false;
+      this.draggedNode = null;
+      this.dropTargetNode = null;
       canvas.classList.remove('grabbing');
+      canvas.style.cursor = 'grab';
+      this.draw();
     });
   }
 
@@ -417,17 +476,29 @@ export class DashComponent implements AfterViewInit {
     console.log('Drawing node:', node.label, 'color:', node.color, 'position:', node.x, node.y, 'radius:', node.radius, 'type:', node.type);
     
     const isHovered = node === this.hoveredNode;
-    const effectiveRadius = isHovered ? node.radius * 1.1 : node.radius;
+    const isDragTarget = node === this.dropTargetNode;
+    const isDragged = node === this.draggedNode;
+    
+    let effectiveRadius = node.radius;
+    if (isHovered) effectiveRadius *= 1.1;
+    if (isDragTarget) effectiveRadius *= 1.2;
+    if (isDragged) effectiveRadius *= 0.9; // Make dragged node slightly smaller
     
     // Save context for shadow
     ctx.save();
     
+    // Special styling for drag operations
+    if (isDragged) {
+      ctx.globalAlpha = 0.8; // Make dragged node semi-transparent
+    }
+    
     // Add modern shadow effect (equivalent to box-shadow)
     if (!isSelected) {
-      ctx.shadowColor = isHovered ? 'rgba(60, 64, 67, 0.4)' : 'rgba(60, 64, 67, 0.3)';
-      ctx.shadowBlur = isHovered ? 8 : 2;
+      ctx.shadowColor = isDragTarget ? 'rgba(16, 185, 129, 0.6)' : 
+                      isHovered ? 'rgba(60, 64, 67, 0.4)' : 'rgba(60, 64, 67, 0.3)';
+      ctx.shadowBlur = isDragTarget ? 15 : isHovered ? 8 : 2;
       ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = isHovered ? 3 : 1;
+      ctx.shadowOffsetY = isDragTarget ? 5 : isHovered ? 3 : 1;
     }
     
     // Draw main circle with premium gradient effect
@@ -448,6 +519,11 @@ export class DashComponent implements AfterViewInit {
       gradient.addColorStop(0, this.lightenColor(this.COLORS.highlight, 0.3));
       gradient.addColorStop(1, this.COLORS.highlight);
       ctx.fillStyle = gradient;
+    } else if (isDragTarget) {
+      // Green glow for valid drop targets
+      gradient.addColorStop(0, this.lightenColor('#10b981', 0.4));
+      gradient.addColorStop(1, '#10b981');
+      ctx.fillStyle = gradient;
     } else if (isHovered) {
       gradient.addColorStop(0, this.lightenColor(node.color, 0.4));
       gradient.addColorStop(1, this.lightenColor(node.color, -0.1));
@@ -462,16 +538,17 @@ export class DashComponent implements AfterViewInit {
     ctx.shadowColor = 'transparent'; // Remove shadow for border
     
     // Add premium border with glow effect
-    ctx.strokeStyle = isSelected ? '#FFD700' : // Gold for selection
+    ctx.strokeStyle = isDragTarget ? '#10b981' : // Green for drop target
+                     isSelected ? '#FFD700' : // Gold for selection
                      isHovered ? this.lightenColor(node.color, 0.5) : 
                      this.lightenColor(node.color, 0.2);
-    ctx.lineWidth = isSelected ? 3 : isHovered ? 2.5 : 2;
+    ctx.lineWidth = isDragTarget ? 4 : isSelected ? 3 : isHovered ? 2.5 : 2;
     
-    // Add glow effect for selected/hovered nodes
-    if (isSelected || isHovered) {
+    // Add glow effect for selected/hovered/target nodes
+    if (isSelected || isHovered || isDragTarget) {
       ctx.save();
-      ctx.shadowColor = isSelected ? '#FFD700' : node.color;
-      ctx.shadowBlur = isSelected ? 15 : 8;
+      ctx.shadowColor = isDragTarget ? '#10b981' : isSelected ? '#FFD700' : node.color;
+      ctx.shadowBlur = isDragTarget ? 20 : isSelected ? 15 : 8;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
       ctx.stroke();
@@ -720,29 +797,109 @@ export class DashComponent implements AfterViewInit {
     this.nodes.forEach(taskNode => {
       if (taskNode.type === 'task') {
         const task = taskNode.data as Task;
+        
+        // Draw connections to assigned users
         if (task.assignedUserIds && task.assignedUserIds.length > 0) {
           task.assignedUserIds.forEach(userId => {
             const userNode = this.nodes.find(n => n.type === 'user' && n.data.id === userId);
             if (userNode) {
-              this.drawConnection(ctx, taskNode, userNode, '#06b6d4', 0.3);
+              this.drawConnection(ctx, taskNode, userNode, '#06b6d4', 0.4, 'User');
+            }
+          });
+        }
+        
+        // Draw connections to assigned groups
+        if (task.assignedGroupIds && task.assignedGroupIds.length > 0) {
+          task.assignedGroupIds.forEach(groupId => {
+            const groupNode = this.nodes.find(n => n.type === 'group' && n.data.id === groupId);
+            if (groupNode) {
+              this.drawConnection(ctx, taskNode, groupNode, '#9c27b0', 0.4, 'Group');
             }
           });
         }
       }
     });
+    
+    // Draw connections between groups and their members
+    this.nodes.forEach(groupNode => {
+      if (groupNode.type === 'group') {
+        const group = groupNode.data as Group;
+        
+        // Draw connections to group members
+        if (group.memberIds && group.memberIds.length > 0) {
+          group.memberIds.forEach(userId => {
+            const userNode = this.nodes.find(n => n.type === 'user' && n.data.id === userId);
+            if (userNode) {
+              this.drawConnection(ctx, groupNode, userNode, '#f59e0b', 0.3, 'Member');
+            }
+          });
+        }
+      }
+    });
+    
+    // Draw preview connection while dragging
+    if (this.isDragging && this.draggedNode && this.dropTargetNode) {
+      let color = '#10b981'; // Default green
+      
+      // Different colors based on drag type
+      if (this.draggedNode.type === 'task' && this.dropTargetNode.type === 'user') {
+        color = '#06b6d4'; // Cyan for task-to-user
+      } else if (this.draggedNode.type === 'task' && this.dropTargetNode.type === 'group') {
+        color = '#9c27b0'; // Purple for task-to-group
+      } else if (this.draggedNode.type === 'user' && this.dropTargetNode.type === 'group') {
+        color = '#f59e0b'; // Orange for user-to-group
+      }
+      
+      this.drawConnection(ctx, this.draggedNode, this.dropTargetNode, color, 0.8, 'Preview');
+    }
   }
 
-  private drawConnection(ctx: CanvasRenderingContext2D, node1: Node, node2: Node, color: string, opacity: number) {
+  private drawConnection(ctx: CanvasRenderingContext2D, node1: Node, node2: Node, color: string, opacity: number, type: string = '') {
     ctx.save();
     ctx.globalAlpha = opacity;
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 5]); // Dashed line
+    ctx.lineWidth = type === 'Preview' ? 4 : 2;
+    
+    if (type === 'Preview') {
+      ctx.setLineDash([8, 4]); // Animated dashed line for preview
+    } else {
+      ctx.setLineDash([5, 5]); // Regular dashed line
+    }
+    
+    // Calculate connection points (edge to edge, not center to center)
+    const dx = node2.x - node1.x;
+    const dy = node2.y - node1.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    const startX = node1.x + (dx / distance) * node1.radius;
+    const startY = node1.y + (dy / distance) * node1.radius;
+    const endX = node2.x - (dx / distance) * node2.radius;
+    const endY = node2.y - (dy / distance) * node2.radius;
     
     ctx.beginPath();
-    ctx.moveTo(node1.x, node1.y);
-    ctx.lineTo(node2.x, node2.y);
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, endY);
     ctx.stroke();
+    
+    // Draw arrow head for better direction indication
+    if (distance > 0) {
+      const arrowLength = 10;
+      const arrowAngle = Math.PI / 6;
+      const angle = Math.atan2(dy, dx);
+      
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(
+        endX - arrowLength * Math.cos(angle - arrowAngle),
+        endY - arrowLength * Math.sin(angle - arrowAngle)
+      );
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(
+        endX - arrowLength * Math.cos(angle + arrowAngle),
+        endY - arrowLength * Math.sin(angle + arrowAngle)
+      );
+      ctx.stroke();
+    }
     
     ctx.restore();
   }
@@ -763,6 +920,220 @@ export class DashComponent implements AfterViewInit {
     
     // Resize canvas to accommodate panel
     this.resizeCanvas();
+  }
+
+  // Generic Drag and Drop Handler
+  handleDragAndDrop(draggedNode: Node, targetNode: Node) {
+    if (draggedNode.type === 'task') {
+      // Handle task assignment to user or group
+      this.handleTaskAssignment(draggedNode, targetNode);
+    } else if (draggedNode.type === 'user' && targetNode.type === 'group') {
+      // Handle user assignment to group
+      this.handleUserToGroupAssignment(draggedNode, targetNode);
+    }
+  }
+
+  // Task Assignment Handler (existing functionality)
+  handleTaskAssignment(taskNode: Node, targetNode: Node) {
+    const task = taskNode.data as Task;
+    const taskId = task.id;
+    
+    if (!taskId) {
+      console.error('Task ID is missing');
+      this.showAssignmentFeedback('Error: Task ID is missing', false);
+      return;
+    }
+
+    if (targetNode.type === 'user') {
+      const user = targetNode.data as User;
+      const userId = user.id;
+      
+      console.log(`Assigning task "${task.name}" to user "${user.username}"`);
+      this.showAssignmentFeedback(`Assigning task to ${user.username}...`, true);
+      
+      this.taskService.assignUser(taskId, userId).subscribe({
+        next: (response) => {
+          console.log('Task assigned to user successfully:', response);
+          this.showAssignmentFeedback(`✓ Task assigned to ${user.username}`, true);
+          
+          // Update the task data to include the new assignment
+          if (!task.assignedUserIds) {
+            task.assignedUserIds = [];
+          }
+          if (!task.assignedUserIds.includes(userId)) {
+            task.assignedUserIds.push(userId);
+          }
+          
+          // Update the node data
+          taskNode.data = task;
+          
+          // Force canvas redraw to show the new connection immediately
+          this.refreshCanvasAfterAssignment();
+          
+          // If the panel is showing this task, update the panel details
+          if (this.selectedNodeDetails && this.selectedNodeDetails.id === taskId) {
+            this.selectedNodeDetails.data = task;
+          }
+        },
+        error: (error) => {
+          console.error('Error assigning task to user:', error);
+          this.showAssignmentFeedback(`✗ Failed to assign task to ${user.username}`, false);
+        }
+      });
+    } else if (targetNode.type === 'group') {
+      const group = targetNode.data as Group;
+      const groupId = group.id;
+      
+      console.log(`Assigning task "${task.name}" to group "${group.name}"`);
+      this.showAssignmentFeedback(`Assigning task to ${group.name}...`, true);
+      
+      this.taskService.assignGroup(taskId, groupId).subscribe({
+        next: (response) => {
+          console.log('Task assigned to group successfully:', response);
+          this.showAssignmentFeedback(`✓ Task assigned to ${group.name}`, true);
+          
+          // Update the task data to include the new assignment
+          if (!task.assignedGroupIds) {
+            task.assignedGroupIds = [];
+          }
+          if (!task.assignedGroupIds.includes(groupId)) {
+            task.assignedGroupIds.push(groupId);
+          }
+          
+          // Update the node data
+          taskNode.data = task;
+          
+          // Force canvas redraw to show the new connection immediately
+          this.refreshCanvasAfterAssignment();
+          
+          // If the panel is showing this task, update the panel details
+          if (this.selectedNodeDetails && this.selectedNodeDetails.id === taskId) {
+            this.selectedNodeDetails.data = task;
+          }
+        },
+        error: (error) => {
+          console.error('Error assigning task to group:', error);
+          this.showAssignmentFeedback(`✗ Failed to assign task to ${group.name}`, false);
+        }
+      });
+    }
+  }
+
+  // Visual feedback for assignment operations
+  showAssignmentFeedback(message: string, isSuccess: boolean) {
+    // Create a temporary notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: white;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      background: ${isSuccess ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)'};
+      border: 1px solid ${isSuccess ? '#34d399' : '#f87171'};
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(100%)';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          document.body.removeChild(notification);
+        }
+      }, 300);
+    }, 3000);
+  }
+
+  // User to Group Assignment Handler
+  handleUserToGroupAssignment(userNode: Node, groupNode: Node) {
+    const user = userNode.data as User;
+    const group = groupNode.data as Group;
+    const userId = user.id;
+    const groupId = group.id;
+    
+    if (!userId || !groupId) {
+      console.error('User ID or Group ID is missing');
+      this.showAssignmentFeedback('Error: Missing user or group ID', false);
+      return;
+    }
+
+    // Check if user is already a member of the group
+    if (group.memberIds && group.memberIds.includes(userId)) {
+      this.showAssignmentFeedback(`${user.username} is already a member of ${group.name}`, false);
+      return;
+    }
+
+    console.log(`Adding user "${user.username}" to group "${group.name}"`);
+    this.showAssignmentFeedback(`Adding ${user.username} to ${group.name}...`, true);
+    
+    // Use the addGroupMembers API
+    const addMembersDto = { userIds: [userId] };
+    
+    this.groupService.addGroupMembers(groupId, addMembersDto).subscribe({
+      next: (updatedGroup) => {
+        console.log('User added to group successfully:', updatedGroup);
+        this.showAssignmentFeedback(`✓ ${user.username} added to ${group.name}`, true);
+        
+        // Update the group data to include the new member
+        if (!group.memberIds) {
+          group.memberIds = [];
+        }
+        if (!group.memberIds.includes(userId)) {
+          group.memberIds.push(userId);
+        }
+        
+        // Update the node data
+        groupNode.data = group;
+        
+        // Force canvas redraw to show the new connection immediately
+        this.refreshCanvasAfterAssignment();
+        
+        // If the panel is showing this group, update the panel details
+        if (this.selectedNodeDetails && this.selectedNodeDetails.id === groupId) {
+          this.selectedNodeDetails.data = group;
+        }
+      },
+      error: (error) => {
+        console.error('Error adding user to group:', error);
+        this.showAssignmentFeedback(`✗ Failed to add ${user.username} to ${group.name}`, false);
+      }
+    });
+  }
+
+  // Method to force immediate canvas refresh after assignments
+  private refreshCanvasAfterAssignment(): void {
+    // Trigger immediate change detection
+    this.cdr.detectChanges();
+    
+    // Force a complete redraw
+    setTimeout(() => {
+      this.draw();
+      this.cdr.detectChanges();
+    }, 50);
+    
+    // Additional redraw for safety
+    setTimeout(() => {
+      this.draw();
+    }, 200);
+  }
+
+  // Create visual connection between nodes
+  createConnection(fromNode: Node, toNode: Node) {
+    // This method can be used to update the visual connections
+    // The connection will be drawn in the drawConnections method
+    console.log(`Creating connection from ${fromNode.label} to ${toNode.label}`);
   }
 
   fetchNodeDetails(node: Node): void {
