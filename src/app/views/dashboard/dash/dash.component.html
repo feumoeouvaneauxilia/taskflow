@@ -1,3 +1,61 @@
-<div class="graph-canvas-full">
-  <canvas #graphCanvas></canvas>
+<div class="dashboard-container">
+  <div class="graph-canvas-container" [class.panel-open]="isPanelOpen">
+    <canvas #graphCanvas></canvas>
+  </div>
+  
+  <!-- Panel Backdrop (click to close) -->
+  <div class="panel-backdrop" [class.active]="isPanelOpen" (click)="closePanel()"></div>
+  
+  <!-- Side Panel -->
+  <div class="side-panel" [class.open]="isPanelOpen">
+    <!-- Floating Close Button -->
+    <button class="floating-close-btn" (click)="closePanel()" title="Close Panel (Press Escape)">
+      ✕
+    </button>
+    
+    <div class="panel-header">
+      <h3>Node Details</h3>
+      <button class="close-btn" (click)="closePanel()" title="Close Panel (Press Escape)">
+        <span>✕</span>
+      </button>
+    </div>
+    
+    <div class="panel-content">
+      <!-- Loading Skeleton -->
+      <div class="skeleton-loader" *ngIf="isLoadingPanelData">
+        <div class="skeleton-item">
+          <div class="skeleton-avatar"></div>
+          <div class="skeleton-text">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+          </div>
+        </div>
+        <div class="skeleton-details">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line short"></div>
+          <div class="skeleton-line"></div>
+        </div>
+      </div>
+      
+      <!-- Node Details -->
+      <div class="node-details" *ngIf="!isLoadingPanelData && selectedNodeDetails">
+        <div class="node-header">
+          <div class="node-icon">{{ getNodeTypeIcon(selectedNodeDetails!.type) }}</div>
+          <div class="node-info">
+            <h4>{{ selectedNodeDetails!.label }}</h4>
+            <span class="node-type">{{ selectedNodeDetails!.type.toUpperCase() }}</span>
+          </div>
+          <div class="node-status" [style.background-color]="getNodeStatusColor(selectedNodeDetails!)"></div>
+        </div>
+        
+        <div class="node-properties">
+          <div class="property" *ngFor="let prop of getNodeDetails(selectedNodeDetails!) | keyvalue">
+            <label>{{ prop.key }}:</label>
+            <span>{{ prop.value }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

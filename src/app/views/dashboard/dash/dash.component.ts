@@ -2,25 +2,42 @@ import { Component, ElementRef, ViewChild, AfterViewInit, HostListener } from '@
 import { TaskService } from '../../../services/task/task.service';
 import { UserService } from '../../../services/user/user.service';
 import { GroupService, Group as GroupInterface } from '../../../services/group/group.service';
-import { FormsModule } from '@angular/forms'; 
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common'; 
 
 interface Task {
-  id: string;
+  id?: string;
   name: string;
+  description?: string;
+  startAt?: string;
+  dueAt?: string;
   status: string;
   assignedUserIds?: string[];
-  // ...other properties...
+  assignedGroupIds?: string[];
+  assignedById?: string;
+  createdById?: string;
+  isValidated?: boolean;
+  adminComplete?: boolean;
 }
 
 interface User {
   id: string;
   username: string;
   email: string;
+  password?: string;
+  roles?: string[];
+  isActive?: boolean;
 }
 
 interface Group {
   id: string;
   name: string;
+  description?: string;
+  createdAt?: string;
+  createdById?: string;
+  managerId?: string;
+  memberIds?: string[];
+  isActive?: boolean;
   members?: User[];
 }
 
@@ -40,7 +57,7 @@ interface Node {
   selector: 'app-dash',
   templateUrl: './dash.component.html',
   styleUrls: ['./dash.component.scss'],
-  imports: [FormsModule]
+  imports: [FormsModule, CommonModule]
 })
 export class DashComponent implements AfterViewInit {
   @ViewChild('graphCanvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
@@ -60,6 +77,12 @@ export class DashComponent implements AfterViewInit {
   // Animation properties
   animationId: number | null = null;
   isAnimating = false;
+
+  // Side panel properties
+  isPanelOpen = false;
+  isLoadingPanelData = false;
+  selectedNodeDetails: Node | null = null;
+  panelWidth = 350;
 
   // Premium color palette with high contrast
   readonly COLORS = {
@@ -103,11 +126,23 @@ export class DashComponent implements AfterViewInit {
   @HostListener('window:resize')
   resizeCanvas() {
     const canvas = this.canvasRef.nativeElement;
-    const rect = canvas.getBoundingClientRect();
+    const container = canvas.parentElement;
     
     console.log('Resizing canvas...');
     console.log('Canvas element:', canvas);
-    console.log('Canvas bounding rect:', rect);
+    
+    if (!container) {
+      console.error('Canvas container not found');
+      return;
+    }
+    
+    // Update container class for panel state
+    if (this.isPanelOpen) {
+      container.classList.add('panel-open');
+    } else {
+      container.classList.remove('panel-open');
+    }
+    
     console.log('Canvas offsetWidth:', canvas.offsetWidth, 'offsetHeight:', canvas.offsetHeight);
     console.log('Canvas computed style display:', getComputedStyle(canvas).display);
     console.log('Canvas computed style visibility:', getComputedStyle(canvas).visibility);
@@ -136,6 +171,14 @@ export class DashComponent implements AfterViewInit {
     console.log('Canvas size set to:', canvas.width, 'x', canvas.height, 'with DPR:', dpr);
     
     this.draw();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent) {
+    // Close panel when Escape key is pressed
+    if (event.key === 'Escape' && this.isPanelOpen) {
+      this.closePanel();
+    }
   }
 
   async loadData() {
@@ -279,6 +322,22 @@ export class DashComponent implements AfterViewInit {
       this.lastMouseY = mouseY;
     });
 
+    // Add double-click event to open panel
+    canvas.addEventListener('dblclick', (e) => {
+      const { x: mouseX, y: mouseY } = getMouse(e);
+      const worldX = (mouseX - this.offsetX) / this.scale;
+      const worldY = (mouseY - this.offsetY) / this.scale;
+      
+      for (let i = this.nodes.length - 1; i >= 0; i--) {
+        const node = this.nodes[i];
+        const dist = Math.sqrt(Math.pow(worldX - node.x, 2) + Math.pow(worldY - node.y, 2));
+        if (dist < node.radius) {
+          this.openPanel(node);
+          break;
+        }
+      }
+    });
+
     canvas.addEventListener('mouseleave', () => {
       this.selectedNode = null;
       this.hoveredNode = null;
@@ -322,7 +381,7 @@ export class DashComponent implements AfterViewInit {
         // Check for hover
         const worldX = (mouseX - this.offsetX) / this.scale;
         const worldY = (mouseY - this.offsetY) / this.scale;
-        let hoveredNode = null;
+        let hoveredNode: Node | null = null;
         
         for (let i = this.nodes.length - 1; i >= 0; i--) {
           const node = this.nodes[i];
@@ -686,5 +745,138 @@ export class DashComponent implements AfterViewInit {
     ctx.stroke();
     
     ctx.restore();
+  }
+
+  // Panel management methods
+  openPanel(node: Node) {
+    this.selectedNodeDetails = node;
+    this.isPanelOpen = true;
+    this.isLoadingPanelData = true;
+    
+    // Fetch detailed data based on node type
+    this.fetchNodeDetails(node);
+    
+    // Set loading to false after 2 seconds (giving time for API call)
+    setTimeout(() => {
+      this.isLoadingPanelData = false;
+    }, 2000);
+    
+    // Resize canvas to accommodate panel
+    this.resizeCanvas();
+  }
+
+  fetchNodeDetails(node: Node): void {
+    try {
+      const nodeId = node.data.id;
+      if (!nodeId) {
+        console.error('Node ID is missing');
+        return;
+      }
+
+      switch (node.type) {
+        case 'group':
+          this.groupService.getGroupById(nodeId).subscribe({
+            next: (groupData) => {
+              if (groupData && this.selectedNodeDetails) {
+                this.selectedNodeDetails.data = groupData;
+              }
+            },
+            error: (error) => console.error('Error fetching group details:', error)
+          });
+          break;
+        case 'task':
+          this.taskService.getTaskById(nodeId).subscribe({
+            next: (taskData) => {
+              if (taskData && this.selectedNodeDetails) {
+                this.selectedNodeDetails.data = taskData;
+              }
+            },
+            error: (error) => console.error('Error fetching task details:', error)
+          });
+          break;
+        case 'user':
+          this.userService.getUserById(nodeId).subscribe({
+            next: (userData) => {
+              if (userData && this.selectedNodeDetails) {
+                this.selectedNodeDetails.data = userData;
+              }
+            },
+            error: (error) => console.error('Error fetching user details:', error)
+          });
+          break;
+      }
+    } catch (error) {
+      console.error(`Error fetching ${node.type} details:`, error);
+    }
+  }
+
+  closePanel() {
+    this.isPanelOpen = false;
+    this.selectedNodeDetails = null;
+    this.isLoadingPanelData = false;
+    
+    // Resize canvas back to full width
+    this.resizeCanvas();
+  }
+
+  getNodeTypeIcon(type: string): string {
+    switch (type) {
+      case 'task': return '📋';
+      case 'user': return '👤';
+      case 'group': return '👥';
+      default: return '●';
+    }
+  }
+
+  getNodeStatusColor(node: Node): string {
+    if (node.type === 'task') {
+      const task = node.data as Task;
+      switch (task.status) {
+        case 'Completed': return '#4CAF50';
+        case 'In Progress': return '#FF9800';
+        case 'Pending': return '#F44336';
+        default: return '#9E9E9E';
+      }
+    }
+    return this.COLORS[node.type].primary;
+  }
+
+  getNodeDetails(node: Node): any {
+    switch (node.type) {
+      case 'task':
+        const task = node.data as Task;
+        return {
+          'Name': task.name,
+          'Description': task.description || 'No description',
+          'Status': task.status,
+          'Start Date': task.startAt ? new Date(task.startAt).toLocaleDateString() : 'Not set',
+          'Due Date': task.dueAt ? new Date(task.dueAt).toLocaleDateString() : 'Not set',
+          'Assigned Users': task.assignedUserIds?.length || 0,
+          'Assigned Groups': task.assignedGroupIds?.length || 0,
+          'Is Validated': task.isValidated ? 'Yes' : 'No',
+          'Admin Complete': task.adminComplete ? 'Yes' : 'No'
+        };
+      case 'user':
+        const user = node.data as User;
+        return {
+          'Username': user.username,
+          'Email': user.email,
+          'Is Active': user.isActive ? 'Active' : 'Inactive',
+          'Roles': user.roles ? user.roles.join(', ') : 'No roles assigned'
+        };
+      case 'group':
+        const group = node.data as Group;
+        return {
+          'Name': group.name,
+          'Description': group.description || 'No description',
+          'Manager ID': group.managerId || 'No manager assigned',
+          'Members Count': group.memberIds?.length || 0,
+          'Is Active': group.isActive ? 'Active' : 'Inactive',
+          'Created At': group.createdAt ? new Date(group.createdAt).toLocaleDateString() : 'Unknown',
+          'Created By': group.createdById || 'Unknown'
+        };
+      default:
+        return {};
+    }
   }
 }
