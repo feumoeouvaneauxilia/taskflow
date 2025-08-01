@@ -104,14 +104,15 @@
       [caret]="false" 
       cDropdownToggle 
       class="btn nav-link position-relative"
+      [class.notification-pulse]="hasNewNotification"
       aria-label="Open notifications"
-      (click)="loadNotifications()"
+      (click)="loadNotifications(); hasNewNotification = false"
     >
       <svg cIcon class="my-1" name="cilBell" size="lg"></svg>
       @if (unreadCount$ | async; as count) {
         @if (count > 0) {
           <c-badge 
-            class="position-absolute top-0 start-100 translate-middle rounded-pill"
+            class="position-absolute top-0 start-100 translate-middle rounded-pill notification-badge"
             color="danger"
             style="font-size: 0.6em; padding: 0.25em 0.4em;"
           >
@@ -123,16 +124,26 @@
     <div cDropdownMenu class="py-0" style="width: 350px; max-height: 400px; overflow-y: auto;">
       <div class="bg-body-secondary text-body-secondary fw-semibold py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
         <span>Notifications</span>
-        @if (unreadCount$ | async; as count) {
-          @if (count > 0) {
-            <button 
-              class="btn btn-sm btn-outline-primary"
-              (click)="markAllAsRead()"
-            >
-              Mark all read
-            </button>
+        <div class="d-flex gap-1">
+          <button 
+            class="btn btn-sm btn-outline-secondary"
+            (click)="refreshNotifications()"
+            title="Refresh notifications"
+          >
+            <svg cIcon name="cilReload" size="sm"></svg>
+          </button>
+          @if (unreadCount$ | async; as count) {
+            @if (count > 0) {
+              <button 
+                class="btn btn-sm btn-outline-primary"
+                (click)="markAllAsRead()"
+                title="Mark all as read"
+              >
+                Mark all read
+              </button>
+            }
           }
-        }
+        </div>
       </div>
       
       @if (notifications$ | async; as notifications) {

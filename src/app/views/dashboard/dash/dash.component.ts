@@ -84,10 +84,15 @@ export class DashComponent implements AfterViewInit {
   selectedNodeDetails: Node | null = null;
   panelWidth = 350;
 
+  // Manager names cache for displaying manager names instead of IDs
+  managerNames: { [managerId: string]: string } = {};
+
   // Drag and Drop properties
   isDragging = false;
   draggedNode: Node | null = null;
   dropTargetNode: Node | null = null;
+  dragOperation: 'assign' | 'unassign' | null = null;
+  dragMessage: string = '';
 
   // Premium color palette with high contrast
   readonly COLORS = {
@@ -190,6 +195,9 @@ export class DashComponent implements AfterViewInit {
   async loadData() {
     try {
       console.log('Loading dashboard data...');
+      
+      // Clear the manager names cache when loading new data
+      this.managerNames = {};
       
       // Load all data concurrently with proper error handling
       const results = await Promise.allSettled([
@@ -423,7 +431,16 @@ export class DashComponent implements AfterViewInit {
         
         if (potentialDropTarget !== this.dropTargetNode) {
           this.dropTargetNode = potentialDropTarget;
-          canvas.style.cursor = potentialDropTarget ? 'copy' : 'grabbing';
+          
+          // Update drag operation and message
+          if (potentialDropTarget) {
+            this.updateDragOperation();
+            canvas.style.cursor = 'copy';
+          } else {
+            this.dragOperation = null;
+            this.dragMessage = '';
+            canvas.style.cursor = 'grabbing';
+          }
         }
       } else {
         // Check for hover
@@ -464,10 +481,48 @@ export class DashComponent implements AfterViewInit {
       this.isDragging = false;
       this.draggedNode = null;
       this.dropTargetNode = null;
+      this.dragOperation = null;
+      this.dragMessage = '';
       canvas.classList.remove('grabbing');
       canvas.style.cursor = 'grab';
       this.draw();
     });
+  }
+
+  private updateDragOperation() {
+    if (!this.draggedNode || !this.dropTargetNode) return;
+
+    // Determine operation and message based on drag type and current state
+    if (this.draggedNode.type === 'task' && this.dropTargetNode.type === 'user') {
+      const task = this.draggedNode.data as Task;
+      const userId = this.dropTargetNode.data.id;
+      const isAssigned = userId ? (task.assignedUserIds?.includes(userId) || false) : false;
+      
+      this.dragOperation = isAssigned ? 'unassign' : 'assign';
+      this.dragMessage = isAssigned 
+        ? `Unassign task "${task.name}" from ${this.dropTargetNode.label}`
+        : `Assign task "${task.name}" to ${this.dropTargetNode.label}`;
+        
+    } else if (this.draggedNode.type === 'task' && this.dropTargetNode.type === 'group') {
+      const task = this.draggedNode.data as Task;
+      const groupId = this.dropTargetNode.data.id;
+      const isAssigned = groupId ? (task.assignedGroupIds?.includes(groupId) || false) : false;
+      
+      this.dragOperation = isAssigned ? 'unassign' : 'assign';
+      this.dragMessage = isAssigned 
+        ? `Unassign task "${task.name}" from group ${this.dropTargetNode.label}`
+        : `Assign task "${task.name}" to group ${this.dropTargetNode.label}`;
+        
+    } else if (this.draggedNode.type === 'user' && this.dropTargetNode.type === 'group') {
+      const group = this.dropTargetNode.data as Group;
+      const userId = this.draggedNode.data.id;
+      const isMember = userId ? (group.memberIds?.includes(userId) || false) : false;
+      
+      this.dragOperation = isMember ? 'unassign' : 'assign';
+      this.dragMessage = isMember 
+        ? `Remove ${this.draggedNode.label} from group ${this.dropTargetNode.label}`
+        : `Add ${this.draggedNode.label} to group ${this.dropTargetNode.label}`;
+    }
   }
 
 
@@ -839,18 +894,29 @@ export class DashComponent implements AfterViewInit {
     
     // Draw preview connection while dragging
     if (this.isDragging && this.draggedNode && this.dropTargetNode) {
-      let color = '#10b981'; // Default green
+      let color = '#10b981'; // Default green for assignment
+      let isUnassigning = false;
       
-      // Different colors based on drag type
+      // Check if this would be an unassignment operation
       if (this.draggedNode.type === 'task' && this.dropTargetNode.type === 'user') {
-        color = '#06b6d4'; // Cyan for task-to-user
+        const task = this.draggedNode.data as Task;
+        const userId = this.dropTargetNode.data.id;
+        isUnassigning = userId ? (task.assignedUserIds?.includes(userId) || false) : false;
+        color = isUnassigning ? '#ef4444' : '#06b6d4'; // Red for unassign, cyan for assign
       } else if (this.draggedNode.type === 'task' && this.dropTargetNode.type === 'group') {
-        color = '#9c27b0'; // Purple for task-to-group
+        const task = this.draggedNode.data as Task;
+        const groupId = this.dropTargetNode.data.id;
+        isUnassigning = groupId ? (task.assignedGroupIds?.includes(groupId) || false) : false;
+        color = isUnassigning ? '#ef4444' : '#9c27b0'; // Red for unassign, purple for assign
       } else if (this.draggedNode.type === 'user' && this.dropTargetNode.type === 'group') {
-        color = '#f59e0b'; // Orange for user-to-group
+        const group = this.dropTargetNode.data as Group;
+        const userId = this.draggedNode.data.id;
+        isUnassigning = userId ? (group.memberIds?.includes(userId) || false) : false;
+        color = isUnassigning ? '#ef4444' : '#f59e0b'; // Red for remove, orange for add
       }
       
-      this.drawConnection(ctx, this.draggedNode, this.dropTargetNode, color, 0.8, 'Preview');
+      const previewType = isUnassigning ? 'Unassign' : 'Assign';
+      this.drawConnection(ctx, this.draggedNode, this.dropTargetNode, color, 0.8, previewType);
     }
   }
 
@@ -858,12 +924,17 @@ export class DashComponent implements AfterViewInit {
     ctx.save();
     ctx.globalAlpha = opacity;
     ctx.strokeStyle = color;
-    ctx.lineWidth = type === 'Preview' ? 4 : 2;
     
-    if (type === 'Preview') {
-      ctx.setLineDash([8, 4]); // Animated dashed line for preview
+    // Different line styles based on operation type
+    if (type === 'Assign' || type === 'Preview') {
+      ctx.lineWidth = 4;
+      ctx.setLineDash([8, 4]); // Dashed line for assignment preview
+    } else if (type === 'Unassign') {
+      ctx.lineWidth = 4;
+      ctx.setLineDash([4, 8]); // Different dash pattern for unassignment
     } else {
-      ctx.setLineDash([5, 5]); // Regular dashed line
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]); // Regular dashed line for existing connections
     }
     
     // Calculate connection points (edge to edge, not center to center)
@@ -881,24 +952,38 @@ export class DashComponent implements AfterViewInit {
     ctx.lineTo(endX, endY);
     ctx.stroke();
     
-    // Draw arrow head for better direction indication
+    // Draw different arrow styles based on operation
     if (distance > 0) {
-      const arrowLength = 10;
+      const arrowLength = type === 'Unassign' ? 15 : 10;
       const arrowAngle = Math.PI / 6;
       const angle = Math.atan2(dy, dx);
       
-      ctx.beginPath();
-      ctx.moveTo(endX, endY);
-      ctx.lineTo(
-        endX - arrowLength * Math.cos(angle - arrowAngle),
-        endY - arrowLength * Math.sin(angle - arrowAngle)
-      );
-      ctx.moveTo(endX, endY);
-      ctx.lineTo(
-        endX - arrowLength * Math.cos(angle + arrowAngle),
-        endY - arrowLength * Math.sin(angle + arrowAngle)
-      );
-      ctx.stroke();
+      if (type === 'Unassign') {
+        // Draw an 'X' style marker for unassignment
+        ctx.lineWidth = 3;
+        ctx.setLineDash([]); // Solid line for the X
+        const xSize = 8;
+        ctx.beginPath();
+        ctx.moveTo(endX - xSize, endY - xSize);
+        ctx.lineTo(endX + xSize, endY + xSize);
+        ctx.moveTo(endX - xSize, endY + xSize);
+        ctx.lineTo(endX + xSize, endY - xSize);
+        ctx.stroke();
+      } else {
+        // Regular arrow head for assignment
+        ctx.beginPath();
+        ctx.moveTo(endX, endY);
+        ctx.lineTo(
+          endX - arrowLength * Math.cos(angle - arrowAngle),
+          endY - arrowLength * Math.sin(angle - arrowAngle)
+        );
+        ctx.moveTo(endX, endY);
+        ctx.lineTo(
+          endX - arrowLength * Math.cos(angle + arrowAngle),
+          endY - arrowLength * Math.sin(angle + arrowAngle)
+        );
+        ctx.stroke();
+      }
     }
     
     ctx.restore();
@@ -933,7 +1018,7 @@ export class DashComponent implements AfterViewInit {
     }
   }
 
-  // Task Assignment Handler (existing functionality)
+  // Task Assignment Handler with toggle functionality (assign/unassign)
   handleTaskAssignment(taskNode: Node, targetNode: Node) {
     const task = taskNode.data as Task;
     const taskId = task.id;
@@ -948,74 +1033,148 @@ export class DashComponent implements AfterViewInit {
       const user = targetNode.data as User;
       const userId = user.id;
       
-      console.log(`Assigning task "${task.name}" to user "${user.username}"`);
-      this.showAssignmentFeedback(`Assigning task to ${user.username}...`, true);
+      // Check if user is already assigned to this task
+      const isAlreadyAssigned = task.assignedUserIds && task.assignedUserIds.includes(userId);
       
-      this.taskService.assignUser(taskId, userId).subscribe({
-        next: (response) => {
-          console.log('Task assigned to user successfully:', response);
-          this.showAssignmentFeedback(`✓ Task assigned to ${user.username}`, true);
-          
-          // Update the task data to include the new assignment
-          if (!task.assignedUserIds) {
-            task.assignedUserIds = [];
+      if (isAlreadyAssigned) {
+        // Unassign the user
+        console.log(`Unassigning task "${task.name}" from user "${user.username}"`);
+        this.showAssignmentFeedback(`Unassigning task from ${user.username}...`, true);
+        
+        this.taskService.unassignUser(taskId, userId).subscribe({
+          next: (response) => {
+            console.log('Task unassigned from user successfully:', response);
+            this.showAssignmentFeedback(`✓ Task unassigned from ${user.username}`, true);
+            
+            // Update the task data to remove the assignment
+            if (task.assignedUserIds) {
+              task.assignedUserIds = task.assignedUserIds.filter(id => id !== userId);
+            }
+            
+            // Update the node data
+            taskNode.data = task;
+            
+            // Force canvas redraw to update connections
+            this.refreshCanvasAfterAssignment();
+            
+            // If the panel is showing this task, update the panel details
+            if (this.selectedNodeDetails && this.selectedNodeDetails.id === taskId) {
+              this.selectedNodeDetails.data = task;
+            }
+          },
+          error: (error) => {
+            console.error('Error unassigning task from user:', error);
+            this.showAssignmentFeedback(`✗ Failed to unassign task from ${user.username}`, false);
           }
-          if (!task.assignedUserIds.includes(userId)) {
-            task.assignedUserIds.push(userId);
+        });
+      } else {
+        // Assign the user
+        console.log(`Assigning task "${task.name}" to user "${user.username}"`);
+        this.showAssignmentFeedback(`Assigning task to ${user.username}...`, true);
+        
+        this.taskService.assignUser(taskId, userId).subscribe({
+          next: (response) => {
+            console.log('Task assigned to user successfully:', response);
+            this.showAssignmentFeedback(`✓ Task assigned to ${user.username}`, true);
+            
+            // Update the task data to include the new assignment
+            if (!task.assignedUserIds) {
+              task.assignedUserIds = [];
+            }
+            if (!task.assignedUserIds.includes(userId)) {
+              task.assignedUserIds.push(userId);
+            }
+            
+            // Update the node data
+            taskNode.data = task;
+            
+            // Force canvas redraw to show the new connection immediately
+            this.refreshCanvasAfterAssignment();
+            
+            // If the panel is showing this task, update the panel details
+            if (this.selectedNodeDetails && this.selectedNodeDetails.id === taskId) {
+              this.selectedNodeDetails.data = task;
+            }
+          },
+          error: (error) => {
+            console.error('Error assigning task to user:', error);
+            this.showAssignmentFeedback(`✗ Failed to assign task to ${user.username}`, false);
           }
-          
-          // Update the node data
-          taskNode.data = task;
-          
-          // Force canvas redraw to show the new connection immediately
-          this.refreshCanvasAfterAssignment();
-          
-          // If the panel is showing this task, update the panel details
-          if (this.selectedNodeDetails && this.selectedNodeDetails.id === taskId) {
-            this.selectedNodeDetails.data = task;
-          }
-        },
-        error: (error) => {
-          console.error('Error assigning task to user:', error);
-          this.showAssignmentFeedback(`✗ Failed to assign task to ${user.username}`, false);
-        }
-      });
+        });
+      }
     } else if (targetNode.type === 'group') {
       const group = targetNode.data as Group;
       const groupId = group.id;
       
-      console.log(`Assigning task "${task.name}" to group "${group.name}"`);
-      this.showAssignmentFeedback(`Assigning task to ${group.name}...`, true);
+      // Check if group is already assigned to this task
+      const isAlreadyAssigned = task.assignedGroupIds && task.assignedGroupIds.includes(groupId);
       
-      this.taskService.assignGroup(taskId, groupId).subscribe({
-        next: (response) => {
-          console.log('Task assigned to group successfully:', response);
-          this.showAssignmentFeedback(`✓ Task assigned to ${group.name}`, true);
-          
-          // Update the task data to include the new assignment
-          if (!task.assignedGroupIds) {
-            task.assignedGroupIds = [];
+      if (isAlreadyAssigned) {
+        // Unassign the group
+        console.log(`Unassigning task "${task.name}" from group "${group.name}"`);
+        this.showAssignmentFeedback(`Unassigning task from ${group.name}...`, true);
+        
+        this.taskService.unassignGroup(taskId, groupId).subscribe({
+          next: (response) => {
+            console.log('Task unassigned from group successfully:', response);
+            this.showAssignmentFeedback(`✓ Task unassigned from ${group.name}`, true);
+            
+            // Update the task data to remove the assignment
+            if (task.assignedGroupIds) {
+              task.assignedGroupIds = task.assignedGroupIds.filter(id => id !== groupId);
+            }
+            
+            // Update the node data
+            taskNode.data = task;
+            
+            // Force canvas redraw to update connections
+            this.refreshCanvasAfterAssignment();
+            
+            // If the panel is showing this task, update the panel details
+            if (this.selectedNodeDetails && this.selectedNodeDetails.id === taskId) {
+              this.selectedNodeDetails.data = task;
+            }
+          },
+          error: (error) => {
+            console.error('Error unassigning task from group:', error);
+            this.showAssignmentFeedback(`✗ Failed to unassign task from ${group.name}`, false);
           }
-          if (!task.assignedGroupIds.includes(groupId)) {
-            task.assignedGroupIds.push(groupId);
+        });
+      } else {
+        // Assign the group
+        console.log(`Assigning task "${task.name}" to group "${group.name}"`);
+        this.showAssignmentFeedback(`Assigning task to ${group.name}...`, true);
+        
+        this.taskService.assignGroup(taskId, groupId).subscribe({
+          next: (response) => {
+            console.log('Task assigned to group successfully:', response);
+            this.showAssignmentFeedback(`✓ Task assigned to ${group.name}`, true);
+            
+            // Update the task data to include the new assignment
+            if (!task.assignedGroupIds) {
+              task.assignedGroupIds = [];
+            }
+            if (!task.assignedGroupIds.includes(groupId)) {
+              task.assignedGroupIds.push(groupId);
+            }
+            
+            // Update the node data
+            taskNode.data = task;
+            
+            // Force canvas redraw to show the new connection immediately
+            this.refreshCanvasAfterAssignment();
+            
+            // If the panel is showing this task, update the panel details
+            if (this.selectedNodeDetails && this.selectedNodeDetails.id === taskId) {
+              this.selectedNodeDetails.data = task;
+            }
+          },
+          error: (error) => {
+            console.error('Error assigning task to group:', error);
+            this.showAssignmentFeedback(`✗ Failed to assign task to ${group.name}`, false);
           }
-          
-          // Update the node data
-          taskNode.data = task;
-          
-          // Force canvas redraw to show the new connection immediately
-          this.refreshCanvasAfterAssignment();
-          
-          // If the panel is showing this task, update the panel details
-          if (this.selectedNodeDetails && this.selectedNodeDetails.id === taskId) {
-            this.selectedNodeDetails.data = task;
-          }
-        },
-        error: (error) => {
-          console.error('Error assigning task to group:', error);
-          this.showAssignmentFeedback(`✗ Failed to assign task to ${group.name}`, false);
-        }
-      });
+        });
+      }
     }
   }
 
@@ -1056,7 +1215,7 @@ export class DashComponent implements AfterViewInit {
     }, 3000);
   }
 
-  // User to Group Assignment Handler
+  // User to Group Assignment Handler with toggle functionality (add/remove)
   handleUserToGroupAssignment(userNode: Node, groupNode: Node) {
     const user = userNode.data as User;
     const group = groupNode.data as Group;
@@ -1070,46 +1229,77 @@ export class DashComponent implements AfterViewInit {
     }
 
     // Check if user is already a member of the group
-    if (group.memberIds && group.memberIds.includes(userId)) {
-      this.showAssignmentFeedback(`${user.username} is already a member of ${group.name}`, false);
-      return;
+    const isAlreadyMember = group.memberIds && group.memberIds.includes(userId);
+    
+    if (isAlreadyMember) {
+      // Remove the user from the group
+      console.log(`Removing user "${user.username}" from group "${group.name}"`);
+      this.showAssignmentFeedback(`Removing ${user.username} from ${group.name}...`, true);
+      
+      this.groupService.removeGroupMember(groupId, userId).subscribe({
+        next: (updatedGroup) => {
+          console.log('User removed from group successfully:', updatedGroup);
+          this.showAssignmentFeedback(`✓ ${user.username} removed from ${group.name}`, true);
+          
+          // Update the group data to remove the member
+          if (group.memberIds) {
+            group.memberIds = group.memberIds.filter(id => id !== userId);
+          }
+          
+          // Update the node data
+          groupNode.data = group;
+          
+          // Force canvas redraw to update connections
+          this.refreshCanvasAfterAssignment();
+          
+          // If the panel is showing this group, update the panel details
+          if (this.selectedNodeDetails && this.selectedNodeDetails.id === groupId) {
+            this.selectedNodeDetails.data = group;
+          }
+        },
+        error: (error) => {
+          console.error('Error removing user from group:', error);
+          this.showAssignmentFeedback(`✗ Failed to remove ${user.username} from ${group.name}`, false);
+        }
+      });
+    } else {
+      // Add the user to the group
+      console.log(`Adding user "${user.username}" to group "${group.name}"`);
+      this.showAssignmentFeedback(`Adding ${user.username} to ${group.name}...`, true);
+      
+      // Use the addGroupMembers API
+      const addMembersDto = { userIds: [userId] };
+      
+      this.groupService.addGroupMembers(groupId, addMembersDto).subscribe({
+        next: (updatedGroup) => {
+          console.log('User added to group successfully:', updatedGroup);
+          this.showAssignmentFeedback(`✓ ${user.username} added to ${group.name}`, true);
+          
+          // Update the group data to include the new member
+          if (!group.memberIds) {
+            group.memberIds = [];
+          }
+          if (!group.memberIds.includes(userId)) {
+            group.memberIds.push(userId);
+          }
+          
+          // Update the node data
+          groupNode.data = group;
+          
+          // Force canvas redraw to show the new connection immediately
+          this.refreshCanvasAfterAssignment();
+          
+          // If the panel is showing this group, update the panel details
+          if (this.selectedNodeDetails && this.selectedNodeDetails.id === groupId) {
+            this.selectedNodeDetails.data = group;
+          }
+        },
+        error: (error) => {
+          console.error('Error adding user to group:', error);
+          this.showAssignmentFeedback(`✗ Failed to add ${user.username} to ${group.name}`, false);
+        }
+      });
     }
-
-    console.log(`Adding user "${user.username}" to group "${group.name}"`);
-    this.showAssignmentFeedback(`Adding ${user.username} to ${group.name}...`, true);
-    
-    // Use the addGroupMembers API
-    const addMembersDto = { userIds: [userId] };
-    
-    this.groupService.addGroupMembers(groupId, addMembersDto).subscribe({
-      next: (updatedGroup) => {
-        console.log('User added to group successfully:', updatedGroup);
-        this.showAssignmentFeedback(`✓ ${user.username} added to ${group.name}`, true);
-        
-        // Update the group data to include the new member
-        if (!group.memberIds) {
-          group.memberIds = [];
-        }
-        if (!group.memberIds.includes(userId)) {
-          group.memberIds.push(userId);
-        }
-        
-        // Update the node data
-        groupNode.data = group;
-        
-        // Force canvas redraw to show the new connection immediately
-        this.refreshCanvasAfterAssignment();
-        
-        // If the panel is showing this group, update the panel details
-        if (this.selectedNodeDetails && this.selectedNodeDetails.id === groupId) {
-          this.selectedNodeDetails.data = group;
-        }
-      },
-      error: (error) => {
-        console.error('Error adding user to group:', error);
-        this.showAssignmentFeedback(`✗ Failed to add ${user.username} to ${group.name}`, false);
-      }
-    });
   }
 
   // Method to force immediate canvas refresh after assignments
@@ -1150,6 +1340,14 @@ export class DashComponent implements AfterViewInit {
             next: (groupData) => {
               if (groupData && this.selectedNodeDetails) {
                 this.selectedNodeDetails.data = groupData;
+                
+                // Fetch manager name if managerId exists
+                if (groupData.managerId) {
+                  this.fetchManagerName(groupData.managerId);
+                }
+                
+                // Trigger change detection to update the panel
+                this.cdr.detectChanges();
               }
             },
             error: (error) => console.error('Error fetching group details:', error)
@@ -1237,17 +1435,61 @@ export class DashComponent implements AfterViewInit {
         };
       case 'group':
         const group = node.data as Group;
-        return {
+        const details = {
           'Name': group.name,
           'Description': group.description || 'No description',
-          'Manager ID': group.managerId || 'No manager assigned',
+          'Manager': 'Loading...',
           'Members Count': group.memberIds?.length || 0,
           'Is Active': group.isActive ? 'Active' : 'Inactive',
           'Created At': group.createdAt ? new Date(group.createdAt).toLocaleDateString() : 'Unknown',
           'Created By': group.createdById || 'Unknown'
         };
+
+        // Fetch manager name if managerId exists
+        if (group.managerId) {
+          this.fetchManagerName(group.managerId);
+          details['Manager'] = this.managerNames[group.managerId] || 'Loading...';
+        } else {
+          details['Manager'] = 'No manager assigned';
+        }
+
+        return details;
       default:
         return {};
     }
+  }
+
+  /**
+   * Fetches and caches manager name by ID
+   */
+  private fetchManagerName(managerId: string): void {
+    // If we already have the manager name cached and it's not a loading state, don't fetch again
+    if (this.managerNames[managerId] && this.managerNames[managerId] !== 'Loading...') {
+      return;
+    }
+
+    // Set loading state
+    this.managerNames[managerId] = 'Loading...';
+
+    // Fetch manager details
+    this.userService.getUserById(managerId).subscribe({
+      next: (userData) => {
+        if (userData && userData.username) {
+          this.managerNames[managerId] = userData.username;
+          console.log(`Manager name fetched: ${userData.username} for ID: ${managerId}`);
+        } else {
+          this.managerNames[managerId] = 'Unknown Manager';
+          console.warn(`Manager data incomplete for ID: ${managerId}`);
+        }
+        
+        // Trigger change detection to update the panel if it's currently showing this group
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error fetching manager details:', error);
+        this.managerNames[managerId] = 'Error loading manager';
+        this.cdr.detectChanges();
+      }
+    });
   }
 }

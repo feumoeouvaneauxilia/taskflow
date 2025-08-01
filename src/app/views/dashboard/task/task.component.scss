@@ -272,6 +272,24 @@ th, td {
   border-bottom: 1px solid #eee;
 }
 
+/* Specific styling for action buttons column */
+td:last-child {
+  white-space: nowrap !important;
+  min-width: 200px;
+  
+  /* Flexbox container for action buttons */
+  display: table-cell;
+  vertical-align: middle;
+}
+
+/* Action buttons wrapper to ensure horizontal layout */
+td:last-child > * {
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  gap: 0.25rem;
+  align-items: center;
+}
+
 thead th {
   background: #232323;
   color: #fff;
@@ -675,6 +693,28 @@ select.form-select-sm {
   min-width: 60px;
 }
 
+/* Action buttons styling - keep horizontal on all screen sizes */
+td button[cButton] {
+  font-size: 0.75rem !important;
+  padding: 0.25rem 0.5rem !important;
+  margin-right: 0.25rem !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  
+  svg {
+    width: 12px !important;
+    height: 12px !important;
+    margin-right: 0.25rem !important;
+  }
+}
+
+/* Ensure action buttons container stays horizontal */
+td:last-child {
+  white-space: nowrap !important;
+  min-width: 200px !important;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   /* Mobile table responsiveness */
@@ -684,7 +724,7 @@ select.form-select-sm {
   }
   
   table {
-    min-width: 800px;
+    min-width: 1000px;
     font-size: 0.875rem;
   }
   
@@ -692,6 +732,24 @@ select.form-select-sm {
     padding: 6px 8px;
     font-size: 0.875rem;
     white-space: nowrap;
+  }
+  
+  /* Make action buttons even more compact on mobile */
+  td button[cButton] {
+    font-size: 0.7rem !important;
+    padding: 0.2rem 0.4rem !important;
+    margin-right: 0.2rem !important;
+    
+    svg {
+      width: 10px !important;
+      height: 10px !important;
+      margin-right: 0.2rem !important;
+    }
+  }
+  
+  /* Keep action column compact but ensure buttons stay horizontal */
+  td:last-child {
+    min-width: 180px !important;
   }
   
   /* Stack search and items per page on mobile */
@@ -730,15 +788,25 @@ select.form-select-sm {
 @media (max-width: 576px) {
   /* Small mobile devices */
   table {
-    min-width: 700px;
+    min-width: 900px;
   }
   
-  /* Hide less critical columns on very small screens */
-  th:nth-child(3), 
-  td:nth-child(3),
-  th:nth-child(7), 
-  td:nth-child(7) {
-    display: none;
+  /* Make action buttons very compact but keep horizontal */
+  td button[cButton] {
+    font-size: 0.65rem !important;
+    padding: 0.15rem 0.3rem !important;
+    margin-right: 0.15rem !important;
+    
+    svg {
+      width: 8px !important;
+      height: 8px !important;
+      margin-right: 0.15rem !important;
+    }
+  }
+  
+  /* Smaller action column but maintain horizontal layout */
+  td:last-child {
+    min-width: 160px !important;
   }
   
   /* Smaller text for very small screens */
@@ -772,28 +840,50 @@ select.form-select-sm {
   }
   
   table {
-    min-width: 600px;
+    min-width: 850px;
   }
   
-  /* Hide more columns for very small screens */
-  th:nth-child(8), 
-  td:nth-child(8),
-  th:nth-child(9), 
-  td:nth-child(9) {
-    display: none;
+  /* Ultra compact action buttons */
+  td button[cButton] {
+    font-size: 0.6rem !important;
+    padding: 0.1rem 0.25rem !important;
+    margin-right: 0.1rem !important;
+    
+    svg {
+      width: 6px !important;
+      height: 6px !important;
+      margin-right: 0.1rem !important;
+    }
+  }
+  
+  /* Minimum action column width */
+  td:last-child {
+    min-width: 140px !important;
   }
 }
 
 @media (max-width: 320px) {
   /* Extra small devices */
   table {
-    min-width: 500px;
+    min-width: 800px;
   }
   
-  /* Show only essential columns */
-  th:nth-child(n+6), 
-  td:nth-child(n+6) {
-    display: none;
+  /* Minimal action buttons */
+  td button[cButton] {
+    font-size: 0.55rem !important;
+    padding: 0.1rem 0.2rem !important;
+    margin-right: 0.05rem !important;
+    
+    svg {
+      width: 5px !important;
+      height: 5px !important;
+      margin-right: 0.05rem !important;
+    }
+  }
+  
+  /* Absolute minimum action column width */
+  td:last-child {
+    min-width: 120px !important;
   }
   
   th, td {

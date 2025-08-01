@@ -1,5 +1,5 @@
 import { NgTemplateOutlet, AsyncPipe } from '@angular/common';
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { UserService } from '../../../services/user/user.service';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -31,7 +31,7 @@ import {
 import { IconDirective } from '@coreui/icons-angular';
 import { AuthService } from '../../../services/auth/auth.service';
 import { NotificationService } from '../../../services/notification/notification.service';
-import { Notification } from '../../../interfaces/notification.interface';
+import type { Notification } from '../../../interfaces/notification.interface';
 import { Observable } from 'rxjs';
 
 @Component({
@@ -39,7 +39,7 @@ import { Observable } from 'rxjs';
   templateUrl: './default-header.component.html',
   imports: [ContainerComponent, HeaderTogglerDirective, SidebarToggleDirective, IconDirective, HeaderNavComponent, RouterLink, NgTemplateOutlet, AsyncPipe, BreadcrumbRouterComponent, DropdownComponent, DropdownToggleDirective, AvatarComponent, DropdownMenuDirective, DropdownHeaderDirective, DropdownItemDirective, BadgeComponent, DropdownDividerDirective]
 })
-export class DefaultHeaderComponent extends HeaderComponent {
+export class DefaultHeaderComponent extends HeaderComponent implements OnInit, OnDestroy {
 
   readonly #colorModeService = inject(ColorModeService);
   readonly colorMode = this.#colorModeService.colorMode;
@@ -65,6 +65,110 @@ export class DefaultHeaderComponent extends HeaderComponent {
     this.notifications$ = this.notificationService.notifications$;
   }
 
+  ngOnInit(): void {
+    // Set up page visibility handling for better performance
+    this.setupVisibilityHandling();
+    
+    // Request notification permission
+    this.requestNotificationPermission();
+    
+    // Initial load of notifications
+    this.loadNotifications();
+    
+    // Subscribe to unread count changes to detect new notifications
+    this.subscribeToNotificationChanges();
+  }
+
+  /**
+   * Request browser notification permission
+   */
+  private requestNotificationPermission(): void {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        console.log('Notification permission:', permission);
+      });
+    }
+  }
+
+  ngOnDestroy(): void {
+    // Cleanup is handled by the notification service
+  }
+
+  /**
+   * Subscribe to notification changes to provide visual feedback
+   */
+  private subscribeToNotificationChanges(): void {
+    let previousCount = 0;
+    
+    this.unreadCount$.subscribe(count => {
+      // If count increased, show animation
+      if (count > previousCount && previousCount > 0) {
+        this.hasNewNotification = true;
+        console.log('New notification received! Count:', count);
+        
+        // Show browser notification if permission granted
+        this.showBrowserNotification();
+        
+        // Auto-hide the animation after 5 seconds
+        setTimeout(() => {
+          this.hasNewNotification = false;
+        }, 5000);
+      }
+      previousCount = count;
+    });
+  }
+
+  /**
+   * Show browser notification for new notifications
+   */
+  private showBrowserNotification(): void {
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification('TaskFlow - New Notification', {
+          body: 'You have received a new notification',
+          icon: '/assets/angular.ico', // You can replace with your app icon
+          badge: '/assets/angular.ico'
+        });
+      } else if (Notification.permission !== 'denied') {
+        // Request permission
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            this.showBrowserNotification();
+          }
+        });
+      }
+    }
+  }
+
+  @HostListener('window:focus', [])
+  onWindowFocus(): void {
+    // When user returns to the app, refresh notifications immediately
+    this.notificationService.forceRefresh();
+  }
+
+  @HostListener('window:blur', [])
+  onWindowBlur(): void {
+    // Optional: Could pause polling when window loses focus for battery optimization
+  }
+
+  /**
+   * Set up page visibility API handling
+   */
+  private setupVisibilityHandling(): void {
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          // Page is hidden, could pause polling for battery optimization
+          console.log('Page hidden - notifications still polling in background');
+        } else {
+          // Page is visible again, force refresh
+          console.log('Page visible - refreshing notifications');
+          this.notificationService.forceRefresh();
+        }
+      });
+    }
+  }
+
   private loadUserName(): void {
     this.userName = this.authService.getUsername();
   }
@@ -82,8 +186,19 @@ export class DefaultHeaderComponent extends HeaderComponent {
   // Notification methods
   loadNotifications(): void {
     if (!this.notificationsLoaded) {
-      this.notificationService.getMyNotifications().subscribe();
-      this.notificationsLoaded = true;
+      console.log('Loading notifications for the first time...');
+      this.notificationService.getMyNotifications().subscribe({
+        next: (notifications) => {
+          console.log(`Loaded ${notifications.length} notifications`);
+          this.notificationsLoaded = true;
+        },
+        error: (error) => {
+          console.error('Error loading notifications:', error);
+        }
+      });
+    } else {
+      // Force refresh if already loaded
+      this.notificationService.forceRefresh();
     }
   }
 
@@ -94,7 +209,23 @@ export class DefaultHeaderComponent extends HeaderComponent {
   }
 
   markAllAsRead(): void {
-    this.notificationService.markAllAsRead().subscribe();
+    this.notificationService.markAllAsRead().subscribe({
+      next: () => {
+        console.log('All notifications marked as read');
+        this.hasNewNotification = false;
+      },
+      error: (error) => {
+        console.error('Error marking all notifications as read:', error);
+      }
+    });
+  }
+
+  /**
+   * Manual refresh with user feedback
+   */
+  refreshNotifications(): void {
+    console.log('Manually refreshing notifications...');
+    this.notificationService.forceRefresh();
   }
 
   getNotificationIcon(type: string): string {
@@ -196,5 +327,6 @@ export class DefaultHeaderComponent extends HeaderComponent {
   unreadCount$: Observable<number>;
   notifications$: Observable<Notification[]>;
   notificationsLoaded = false;
+  hasNewNotification = false; // For visual feedback
 
 }
