@@ -9,12 +9,7 @@
   <div class="panel-backdrop" [class.active]="isPanelOpen" (click)="closePanel()"></div>
   
   <!-- Side Panel -->
-  <div class="side-panel" [class.open]="isPanelOpen">
-    <!-- Floating Close Button -->
-    <button class="floating-close-btn" (click)="closePanel()" title="Close Panel (Press Escape)">
-      ✕
-    </button>
-    
+  <div class="side-panel" [class.open]="isPanelOpen">    
     <div class="panel-header">
       <h3>Node Details</h3>
       <button class="close-btn" (click)="closePanel()" title="Close Panel (Press Escape)">
