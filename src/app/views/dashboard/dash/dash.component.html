@@ -1,4 +1,15 @@
 <div class="dashboard-container">
+  <!-- Drag Operation Message -->
+  <div class="drag-message" *ngIf="isDragging && dragMessage" 
+       [class.assign]="dragOperation === 'assign'"
+       [class.unassign]="dragOperation === 'unassign'">
+    <div class="drag-message-icon">
+      <span *ngIf="dragOperation === 'assign'">✓</span>
+      <span *ngIf="dragOperation === 'unassign'">✕</span>
+    </div>
+    <span>{{ dragMessage }}</span>
+  </div>
+
   <div class="graph-canvas-container" [class.panel-open]="isPanelOpen">
     <canvas #graphCanvas 
             [class.dragging]="isDragging"

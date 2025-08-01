@@ -1,14 +1,14 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { tap } from 'rxjs/operators';
-import { Notification } from '../../interfaces/notification.interface';
+import { Observable, BehaviorSubject, interval, Subscription, of } from 'rxjs';
+import { tap, switchMap, catchError } from 'rxjs/operators';
+import type { Notification } from '../../interfaces/notification.interface';
 import { environment } from '../../../environment/environment';
 
 @Injectable({
   providedIn: 'root'
 })
-export class NotificationService {
+export class NotificationService implements OnDestroy {
   private apiUrl = `${environment.baseUrl}/notifications`;
   
   // Reactive state management
@@ -19,8 +19,18 @@ export class NotificationService {
   public unreadCount$ = this.unreadCountSubject.asObservable();
   public notifications$ = this.notificationsSubject.asObservable();
 
+  // Real-time polling properties
+  private pollingSubscription?: Subscription;
+  private pollingInterval = 30000; // 30 seconds
+  private isPollingActive = false;
+
   constructor(private http: HttpClient) {
     this.loadUnreadCount();
+    this.startRealTimePolling();
+  }
+
+  ngOnDestroy(): void {
+    this.stopRealTimePolling();
   }
 
   private getHeaders(): HttpHeaders {
@@ -181,6 +191,86 @@ export class NotificationService {
     } else {
       const days = Math.floor(diffInMinutes / 1440);
       return `${days} day${days > 1 ? 's' : ''} ago`;
+    }
+  }
+
+  /**
+   * Start real-time polling for notifications
+   */
+  private startRealTimePolling(): void {
+    if (this.isPollingActive) {
+      return;
+    }
+
+    console.log('Starting real-time notification polling...');
+    this.isPollingActive = true;
+
+    // Poll every 30 seconds
+    this.pollingSubscription = interval(this.pollingInterval).pipe(
+      switchMap(() => this.getUnreadNotifications()),
+      catchError(error => {
+        console.error('Error in notification polling:', error);
+        // Return empty array to continue polling
+        return of([]);
+      })
+    ).subscribe({
+      next: (notifications) => {
+        // The tap operator in getUnreadNotifications already updates the count
+        console.log(`Polled notifications: ${notifications.length} unread`);
+      },
+      error: (error) => {
+        console.error('Notification polling error:', error);
+        // Restart polling after error
+        setTimeout(() => this.startRealTimePolling(), 5000);
+      }
+    });
+  }
+
+  /**
+   * Stop real-time polling
+   */
+  private stopRealTimePolling(): void {
+    if (this.pollingSubscription) {
+      console.log('Stopping real-time notification polling...');
+      this.pollingSubscription.unsubscribe();
+      this.pollingSubscription = undefined;
+      this.isPollingActive = false;
+    }
+  }
+
+  /**
+   * Set polling interval (in milliseconds)
+   */
+  public setPollingInterval(interval: number): void {
+    this.pollingInterval = interval;
+    if (this.isPollingActive) {
+      this.stopRealTimePolling();
+      this.startRealTimePolling();
+    }
+  }
+
+  /**
+   * Manually trigger notification refresh
+   */
+  public forceRefresh(): void {
+    console.log('Force refreshing notifications...');
+    this.getMyNotifications().subscribe();
+    this.getUnreadNotifications().subscribe();
+  }
+
+  /**
+   * Pause real-time polling (useful when app is not visible)
+   */
+  public pausePolling(): void {
+    this.stopRealTimePolling();
+  }
+
+  /**
+   * Resume real-time polling
+   */
+  public resumePolling(): void {
+    if (!this.isPollingActive) {
+      this.startRealTimePolling();
     }
   }
 }

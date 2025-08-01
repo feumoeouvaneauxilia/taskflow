@@ -22,6 +22,75 @@
   }
 }
 
+// Drag operation message overlay
+.drag-message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.95);
+  color: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+  font-size: 14px;
+  max-width: 400px;
+  text-align: center;
+  
+  .drag-message-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+  
+  &.assign {
+    border-color: rgba(16, 185, 129, 0.5);
+    background: rgba(5, 150, 105, 0.95);
+    
+    .drag-message-icon {
+      background: rgba(16, 185, 129, 0.3);
+      color: #10b981;
+    }
+  }
+  
+  &.unassign {
+    border-color: rgba(239, 68, 68, 0.5);
+    background: rgba(220, 38, 38, 0.95);
+    
+    .drag-message-icon {
+      background: rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+  }
+  
+  // Animation
+  animation: dragMessageFadeIn 0.2s ease-out;
+}
+
+@keyframes dragMessageFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 .graph-canvas-container {
   flex: 1;
   position: relative;
