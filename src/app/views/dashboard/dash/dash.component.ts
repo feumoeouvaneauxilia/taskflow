@@ -84,6 +84,9 @@ export class DashComponent implements AfterViewInit {
   selectedNodeDetails: Node | null = null;
   panelWidth = 350;
 
+  // Manager names cache for displaying manager names instead of IDs
+  managerNames: { [managerId: string]: string } = {};
+
   // Drag and Drop properties
   isDragging = false;
   draggedNode: Node | null = null;
@@ -190,6 +193,9 @@ export class DashComponent implements AfterViewInit {
   async loadData() {
     try {
       console.log('Loading dashboard data...');
+      
+      // Clear the manager names cache when loading new data
+      this.managerNames = {};
       
       // Load all data concurrently with proper error handling
       const results = await Promise.allSettled([
@@ -1150,6 +1156,14 @@ export class DashComponent implements AfterViewInit {
             next: (groupData) => {
               if (groupData && this.selectedNodeDetails) {
                 this.selectedNodeDetails.data = groupData;
+                
+                // Fetch manager name if managerId exists
+                if (groupData.managerId) {
+                  this.fetchManagerName(groupData.managerId);
+                }
+                
+                // Trigger change detection to update the panel
+                this.cdr.detectChanges();
               }
             },
             error: (error) => console.error('Error fetching group details:', error)
@@ -1237,17 +1251,61 @@ export class DashComponent implements AfterViewInit {
         };
       case 'group':
         const group = node.data as Group;
-        return {
+        const details = {
           'Name': group.name,
           'Description': group.description || 'No description',
-          'Manager ID': group.managerId || 'No manager assigned',
+          'Manager': 'Loading...',
           'Members Count': group.memberIds?.length || 0,
           'Is Active': group.isActive ? 'Active' : 'Inactive',
           'Created At': group.createdAt ? new Date(group.createdAt).toLocaleDateString() : 'Unknown',
           'Created By': group.createdById || 'Unknown'
         };
+
+        // Fetch manager name if managerId exists
+        if (group.managerId) {
+          this.fetchManagerName(group.managerId);
+          details['Manager'] = this.managerNames[group.managerId] || 'Loading...';
+        } else {
+          details['Manager'] = 'No manager assigned';
+        }
+
+        return details;
       default:
         return {};
     }
+  }
+
+  /**
+   * Fetches and caches manager name by ID
+   */
+  private fetchManagerName(managerId: string): void {
+    // If we already have the manager name cached and it's not a loading state, don't fetch again
+    if (this.managerNames[managerId] && this.managerNames[managerId] !== 'Loading...') {
+      return;
+    }
+
+    // Set loading state
+    this.managerNames[managerId] = 'Loading...';
+
+    // Fetch manager details
+    this.userService.getUserById(managerId).subscribe({
+      next: (userData) => {
+        if (userData && userData.username) {
+          this.managerNames[managerId] = userData.username;
+          console.log(`Manager name fetched: ${userData.username} for ID: ${managerId}`);
+        } else {
+          this.managerNames[managerId] = 'Unknown Manager';
+          console.warn(`Manager data incomplete for ID: ${managerId}`);
+        }
+        
+        // Trigger change detection to update the panel if it's currently showing this group
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error fetching manager details:', error);
+        this.managerNames[managerId] = 'Error loading manager';
+        this.cdr.detectChanges();
+      }
+    });
   }
 }
