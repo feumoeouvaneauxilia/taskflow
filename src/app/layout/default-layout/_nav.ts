@@ -15,6 +15,12 @@ export const navItems: INavData[] = [
 
   },
   {
+       name: 'My Session',
+      url: '/dashboard/session',
+      iconComponent: { name: 'cil-calendar' },
+
+  },
+  {
       name: 'Task Management',
       url: '/dashboard/task',
       iconComponent: { name: 'cil-task' }

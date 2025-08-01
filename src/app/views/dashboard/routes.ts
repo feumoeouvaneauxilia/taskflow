@@ -50,6 +50,20 @@ export const routes: Routes = [
         data: {
           title: 'Logout'
         }
+      },
+      {
+        path: 'logout',
+        loadComponent: () => import('./logout/logout.component').then(m => m.LogoutComponent),
+        data: {
+          title: 'Logout'
+        }
+      },
+      {
+        path: 'session',
+        loadComponent: () => import('./session/Session.component').then(m => m.SessionComponent),
+        data: {
+          title: 'Session'
+        }
       }
     ]
   }
