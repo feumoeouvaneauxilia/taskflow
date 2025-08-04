@@ -215,40 +215,20 @@ export class DashComponent implements AfterViewInit {
       console.log('Users count:', users.length);
       console.log('Groups count:', groups.length);
 
-      // Create dummy data if no real data is available
+      // Show empty state if no real data is available
       if (tasks.length === 0 && users.length === 0 && groups.length === 0) {
-        console.log('No data found, creating dummy data for demonstration');
-        this.createDummyData();
+        console.log('No data found, showing empty state');
+        this.nodes = [];
+        this.draw();
       } else {
         this.createNodes(tasks, users, groups);
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
-      console.log('Creating dummy data due to error');
-      this.createDummyData();
+      console.log('Error occurred, showing empty state');
+      this.nodes = [];
+      this.draw();
     }
-  }
-
-  createDummyData() {
-    const dummyTasks: Task[] = [
-      { id: '1', name: 'Design UI', status: 'In Progress', assignedUserIds: ['user1'] },
-      { id: '2', name: 'Backend API', status: 'Pending', assignedUserIds: ['user2'] },
-      { id: '3', name: 'Testing', status: 'Completed', assignedUserIds: ['user1', 'user2'] }
-    ];
-
-    const dummyUsers: User[] = [
-      { id: 'user1', username: 'Alice', email: 'alice@example.com' },
-      { id: 'user2', username: 'Bob', email: 'bob@example.com' },
-      { id: 'user3', username: 'Charlie', email: 'charlie@example.com' }
-    ];
-
-    const dummyGroups: GroupInterface[] = [
-      { id: 'group1', name: 'Developers', memberIds: ['user1', 'user2'], managerId: 'user1', description: 'Dev team', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-      { id: 'group2', name: 'Designers', memberIds: ['user3'], managerId: 'user3', description: 'Design team', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-    ];
-
-    console.log('Creating nodes with dummy data');
-    this.createNodes(dummyTasks, dummyUsers, dummyGroups);
   }
 
   createNodes(tasks: Task[], users: User[], groups: GroupInterface[]) {

@@ -205,7 +205,8 @@ export class SessionComponent implements AfterViewInit {
       const currentUser = this.authService.getCurrentUser();
       if (!currentUser) {
         console.error('No current user found');
-        this.createDummyData();
+        this.nodes = [];
+        this.draw();
         return;
       }
       
@@ -244,38 +245,18 @@ export class SessionComponent implements AfterViewInit {
 
       // Create nodes with filtered data (validated tasks and groups only, no other users)
       if (validatedUserTasks.length === 0 && userGroups.length === 0) {
-        console.log('No validated user tasks or groups found, creating dummy data for demonstration');
-        this.createDummyData();
+        console.log('No validated user tasks or groups found, showing empty state');
+        this.nodes = [];
+        this.draw();
       } else {
         this.createUserNodes(validatedUserTasks, userGroups);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
-      console.log('Creating dummy data due to error');
-      this.createDummyData();
+      console.log('Error occurred, showing empty state');
+      this.nodes = [];
+      this.draw();
     }
-  }
-
-  createDummyData() {
-    const dummyTasks: Task[] = [
-      { id: '1', name: 'Design UI', status: 'In Progress', assignedUserIds: ['user1'] },
-      { id: '2', name: 'Backend API', status: 'Pending', assignedUserIds: ['user2'] },
-      { id: '3', name: 'Testing', status: 'Completed', assignedUserIds: ['user1', 'user2'] }
-    ];
-
-    const dummyUsers: User[] = [
-      { id: 'user1', username: 'Alice', email: 'alice@example.com' },
-      { id: 'user2', username: 'Bob', email: 'bob@example.com' },
-      { id: 'user3', username: 'Charlie', email: 'charlie@example.com' }
-    ];
-
-    const dummyGroups: GroupInterface[] = [
-      { id: 'group1', name: 'Developers', memberIds: ['user1', 'user2'], managerId: 'user1', description: 'Dev team', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-      { id: 'group2', name: 'Designers', memberIds: ['user3'], managerId: 'user3', description: 'Design team', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-    ];
-
-    console.log('Creating nodes with dummy data');
-    this.createNodes(dummyTasks, dummyUsers, dummyGroups);
   }
 
   createNodes(tasks: Task[], users: User[], groups: GroupInterface[]) {
