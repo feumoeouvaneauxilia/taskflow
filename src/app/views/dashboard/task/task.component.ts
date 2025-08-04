@@ -1,5 +1,6 @@
 import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { Router } from '@angular/router';
 import { 
   AlignDirective, 
   BorderDirective,
@@ -27,14 +28,15 @@ import {
   FormTextDirective
 } from '@coreui/angular';
 import { IconDirective } from '@coreui/icons-angular';
-import { cilCalendar, cilUser, cilTask, cilCheckCircle, cilClock, cilPencil, cilPeople, cilX, cilMinus, cilShieldAlt, cilNoteAdd, cilSettings, cilAccountLogout, cilUserPlus, cilUserFollow, cilBadge } from '@coreui/icons';
+import { cilCalendar, cilUser, cilTask, cilCheckCircle, cilClock, cilPencil, cilPeople, cilX, cilMinus, cilShieldAlt, cilNoteAdd, cilSettings, cilAccountLogout, cilUserPlus, cilUserFollow, cilBadge, cilHistory } from '@coreui/icons';
 import { TaskService } from '../../../services/task/task.service';
 import { UserService } from '../../../services/user/user.service';
 import { AuthService } from '../../../services/auth/auth.service';
+import { GroupService } from '../../../services/group/group.service';
+import { TaskHistoryService } from '../../../services/task-history/task-history.service';
 import { CommonModule } from '@angular/common';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
-import { GroupService } from '../../../services/group/group.service';  // group service for assignment
 
 interface ITaskData {
   id?: string;
@@ -117,7 +119,8 @@ export class TaskComponent implements OnInit {
     cilAccountLogout, 
     cilUserPlus,
     cilUserFollow,
-    cilBadge
+    cilBadge,
+    cilHistory
   };
   showCreateModal = false;
   createTaskForm: FormGroup;
@@ -145,9 +148,11 @@ export class TaskComponent implements OnInit {
     private taskService: TaskService, 
     private userService: UserService,
     private groupService: GroupService,  // inject group service
+    private taskHistoryService: TaskHistoryService, // inject history service
     private fb: FormBuilder,
     private authService: AuthService,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private router: Router
   ) {
     this.createTaskForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
@@ -892,6 +897,15 @@ export class TaskComponent implements OnInit {
     
     this.taskService.validateTask(task.id, newValidationStatus).subscribe({
       next: () => {
+        // Record history event for validation change
+        this.recordHistoryEvent(
+          task.id!,
+          newValidationStatus ? 'VALIDATED' : 'UNVALIDATED',
+          `Task ${newValidationStatus ? 'validated' : 'unvalidated'} by admin`,
+          task.isValidated?.toString(),
+          newValidationStatus.toString()
+        );
+        
         task.isValidated = newValidationStatus;
         this.messageService.add({
           severity: 'success', 
@@ -931,6 +945,15 @@ export class TaskComponent implements OnInit {
     
     this.taskService.adminCompleteTask(task.id, newAdminCompleteStatus).subscribe({
       next: () => {
+        // Record history event for admin complete change
+        this.recordHistoryEvent(
+          task.id!,
+          newAdminCompleteStatus ? 'ADMIN_COMPLETED' : 'ADMIN_UNCOMPLETED',
+          `Task ${newAdminCompleteStatus ? 'marked as admin complete' : 'admin complete status removed'} by admin`,
+          task.adminComplete?.toString(),
+          newAdminCompleteStatus.toString()
+        );
+        
         task.adminComplete = newAdminCompleteStatus;
         this.messageService.add({
           severity: 'success', 
@@ -951,6 +974,45 @@ export class TaskComponent implements OnInit {
           summary: 'Error', 
           detail: 'Failed to update admin complete status.'
         });
+      }
+    });
+  }
+
+  // Navigate to task history page
+  openHistoryModal(task: ITaskData): void {
+    if (!task.id) return;
+    
+    this.router.navigate(['/dashboard/task-history', task.id]);
+  }
+
+  // Record history event (called internally when actions are performed)
+  private recordHistoryEvent(
+    taskId: string, 
+    action: string, 
+    description: string, 
+    oldValue?: string, 
+    newValue?: string
+  ): void {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) return;
+
+    const historyEvent = {
+      taskId,
+      userId: currentUser.id,
+      action: action as any,
+      oldValue,
+      newValue,
+      description,
+      userEmail: currentUser.email,
+      userName: currentUser.username
+    };
+
+    this.taskHistoryService.addHistoryEvent(historyEvent).subscribe({
+      next: (result) => {
+        console.log('History event recorded successfully:', result);
+      },
+      error: (error) => {
+        console.error('Failed to record history event:', error);
       }
     });
   }

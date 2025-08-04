@@ -1,0 +1,89 @@
+<c-modal 
+  [visible]="visible" 
+  (visibleChange)="onClose()"
+  backdrop="static"
+  size="lg"
+>
+  <c-modal-header>
+    <h4 cModalTitle>
+      <svg [cIcon]="icons.cilHistory" size="sm" class="me-2"></svg>
+      Task History - {{ taskName }}
+    </h4>
+    <button 
+      cButtonClose 
+      (click)="onClose()"
+      aria-label="Close"
+    ></button>
+  </c-modal-header>
+  
+  <c-modal-body>
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+      <c-spinner color="primary"></c-spinner>
+      <span class="ms-2">Loading history...</span>
+    </div>
+
+    <!-- History Timeline -->
+    <div *ngIf="!isLoading" class="history-timeline">
+      <div *ngIf="historyEvents.length === 0" class="text-center text-muted py-4">
+        <svg [cIcon]="icons.cilHistory" size="lg" class="mb-2"></svg>
+        <p>No history events found for this task.</p>
+      </div>
+
+      <div *ngFor="let event of historyEvents; let i = index" class="timeline-item">
+        <div class="timeline-marker">
+          <c-badge [color]="getActionColor(event.action)" class="timeline-badge">
+            <svg [cIcon]="getActionIcon(event.action)" size="sm"></svg>
+          </c-badge>
+        </div>
+        
+        <div class="timeline-content">
+          <div class="timeline-header">
+            <h6 class="mb-1">{{ event.description }}</h6>
+            <small class="text-muted">
+              <svg [cIcon]="icons.cilClock" size="sm" class="me-1"></svg>
+              {{ getTimeAgo(event.timestamp) }}
+            </small>
+          </div>
+          
+          <div class="timeline-details">
+            <div class="d-flex align-items-center mb-1" *ngIf="event.userName || event.userEmail">
+              <svg [cIcon]="icons.cilUser" size="sm" class="me-1 text-muted"></svg>
+              <small class="text-muted">
+                {{ event.userName || event.userEmail }}
+              </small>
+            </div>
+            
+            <!-- Show old/new values for changes -->
+            <div *ngIf="event.oldValue && event.newValue" class="change-details">
+              <small class="text-muted">
+                Changed from 
+                <span class="badge badge-light">{{ event.oldValue }}</span>
+                to 
+                <span class="badge badge-light">{{ event.newValue }}</span>
+              </small>
+            </div>
+            
+            <!-- Full timestamp on hover -->
+            <div class="full-timestamp text-muted" style="font-size: 0.75rem;">
+              {{ formatTimestamp(event.timestamp) }}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Timeline connector line -->
+        <div *ngIf="i < historyEvents.length - 1" class="timeline-connector"></div>
+      </div>
+    </div>
+  </c-modal-body>
+  
+  <c-modal-footer>
+    <button 
+      cButton 
+      color="secondary" 
+      (click)="onClose()"
+    >
+      Close
+    </button>
+  </c-modal-footer>
+</c-modal>

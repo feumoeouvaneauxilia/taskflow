@@ -52,10 +52,10 @@ export const routes: Routes = [
         }
       },
       {
-        path: 'logout',
-        loadComponent: () => import('./logout/logout.component').then(m => m.LogoutComponent),
+        path: 'task-history/:taskId',
+        loadComponent: () => import('./task-history/task-history.component').then(m => m.TaskHistoryComponent),
         data: {
-          title: 'Logout'
+          title: 'Task History'
         }
       },
       {
