@@ -99,12 +99,14 @@
                   <div class="d-inline">
                     Validated
                     <svg [cIcon]="icons.cilShieldAlt" size="sm" class="ms-1 text-danger"></svg>
+                    <small *ngIf="isAdmin()" class="text-muted ms-1">(clickable)</small>
                   </div>
                 </th>
                 <th>
                   <div class="d-inline">
                     Admin Complete
                     <svg [cIcon]="icons.cilBadge" size="sm" class="ms-1 text-danger"></svg>
+                    <small *ngIf="isAdmin()" class="text-muted ms-1">(clickable)</small>
                   </div>
                 </th>
                 <th>
@@ -129,12 +131,24 @@
                 <td>{{ userNames[task.assignedById!] || task.assignedById }}</td>
                 <td>{{ userNames[task.createdById!] || task.createdById }}</td>
                 <td>
-                  <c-badge [color]="task.isValidated ? 'success' : 'danger'">
+                  <c-badge 
+                    [color]="task.isValidated ? 'success' : 'danger'"
+                    [ngClass]="{'clickable-badge': isAdmin()}"
+                    [style.cursor]="isAdmin() ? 'pointer' : 'default'"
+                    [title]="isAdmin() ? 'Click to toggle validation status' : ''"
+                    (click)="isAdmin() ? toggleValidation(task) : null"
+                  >
                     {{ task.isValidated ? 'Yes' : 'No' }}
                   </c-badge>
                 </td>
                 <td>
-                  <c-badge [color]="task.adminComplete ? 'success' : 'danger'">
+                  <c-badge 
+                    [color]="task.adminComplete ? 'success' : 'danger'"
+                    [ngClass]="{'clickable-badge': isAdmin()}"
+                    [style.cursor]="isAdmin() ? 'pointer' : 'default'"
+                    [title]="isAdmin() ? 'Click to toggle admin complete status' : ''"
+                    (click)="isAdmin() ? toggleAdminComplete(task) : null"
+                  >
                     {{ task.adminComplete ? 'Yes' : 'No' }}
                   </c-badge>
                 </td>
@@ -491,14 +505,28 @@
       <p><strong>Assigned By:</strong> {{ userNames[selectedTask.assignedById!] || 'Unknown' }}</p>
       <p><strong>Created By:</strong> {{ userNames[selectedTask.createdById!] || 'Unknown' }}</p>
       <p><strong>Validated:</strong> 
-        <c-badge [color]="selectedTask.isValidated ? 'success' : 'danger'">
+        <c-badge 
+          [color]="selectedTask.isValidated ? 'success' : 'danger'"
+          [ngClass]="{'clickable-badge': isAdmin()}"
+          [style.cursor]="isAdmin() ? 'pointer' : 'default'"
+          [title]="isAdmin() ? 'Click to toggle validation status' : ''"
+          (click)="isAdmin() ? toggleValidation(selectedTask) : null"
+        >
           {{ selectedTask.isValidated ? 'Yes' : 'No' }}
         </c-badge>
+        <small *ngIf="isAdmin()" class="text-muted ms-2">(click to toggle)</small>
       </p>
       <p><strong>Admin Complete:</strong> 
-        <c-badge [color]="selectedTask.adminComplete ? 'success' : 'danger'">
+        <c-badge 
+          [color]="selectedTask.adminComplete ? 'success' : 'danger'"
+          [ngClass]="{'clickable-badge': isAdmin()}"
+          [style.cursor]="isAdmin() ? 'pointer' : 'default'"
+          [title]="isAdmin() ? 'Click to toggle admin complete status' : ''"
+          (click)="isAdmin() ? toggleAdminComplete(selectedTask) : null"
+        >
           {{ selectedTask.adminComplete ? 'Yes' : 'No' }}
         </c-badge>
+        <small *ngIf="isAdmin()" class="text-muted ms-2">(click to toggle)</small>
       </p>
       
       <hr />

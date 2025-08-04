@@ -259,9 +259,11 @@ export class DashComponent implements AfterViewInit {
     console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
     console.log('Center point:', centerX, centerY);
     
-    // Filter tasks to only include validated ones
-    const validatedTasks = tasks.filter(task => task.isValidated === true);
-    console.log(`Filtered ${tasks.length} tasks to ${validatedTasks.length} validated tasks`);
+    // Filter tasks to only include validated ones that are not admin completed
+    const validatedTasks = tasks.filter(task => 
+      task.isValidated === true && task.adminComplete !== true
+    );
+    console.log(`Filtered ${tasks.length} tasks to ${validatedTasks.length} validated tasks (excluding admin completed)`);
     
     this.nodes = [];
     const allItems = [

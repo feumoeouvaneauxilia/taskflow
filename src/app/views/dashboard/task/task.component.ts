@@ -869,4 +869,89 @@ export class TaskComponent implements OnInit {
       this.isUpdatingAssignments = false;
     });
   }
+
+  // Check if current user has admin role
+  isAdmin(): boolean {
+    const currentUser = this.authService.getCurrentUser();
+    const roles = currentUser?.roles?.map((r: string) => r.toLowerCase()) || [];
+    return roles.includes('ROLE_ADMIN'.toLowerCase()) || roles.includes('role_admin');
+  }
+
+  // Toggle task validation status (admin only)
+  toggleValidation(task: ITaskData): void {
+    if (!this.isAdmin() || !task.id) {
+      this.messageService.add({
+        severity: 'warn', 
+        summary: 'Access Denied', 
+        detail: 'Only administrators can change validation status.'
+      });
+      return;
+    }
+
+    const newValidationStatus = !task.isValidated;
+    
+    this.taskService.validateTask(task.id, newValidationStatus).subscribe({
+      next: () => {
+        task.isValidated = newValidationStatus;
+        this.messageService.add({
+          severity: 'success', 
+          summary: 'Success', 
+          detail: `Task ${newValidationStatus ? 'validated' : 'unvalidated'} successfully.`
+        });
+        this.loadTasks(); // Refresh to get updated data
+        
+        // Also refresh selected task if view modal is open
+        if (this.showViewModal && this.selectedTask?.id === task.id) {
+          this.refreshSelectedTask();
+        }
+      },
+      error: (error) => {
+        console.error('Error updating validation status:', error);
+        this.messageService.add({
+          severity: 'error', 
+          summary: 'Error', 
+          detail: 'Failed to update validation status.'
+        });
+      }
+    });
+  }
+
+  // Toggle admin complete status (admin only)
+  toggleAdminComplete(task: ITaskData): void {
+    if (!this.isAdmin() || !task.id) {
+      this.messageService.add({
+        severity: 'warn', 
+        summary: 'Access Denied', 
+        detail: 'Only administrators can change admin complete status.'
+      });
+      return;
+    }
+
+    const newAdminCompleteStatus = !task.adminComplete;
+    
+    this.taskService.adminCompleteTask(task.id, newAdminCompleteStatus).subscribe({
+      next: () => {
+        task.adminComplete = newAdminCompleteStatus;
+        this.messageService.add({
+          severity: 'success', 
+          summary: 'Success', 
+          detail: `Task marked as ${newAdminCompleteStatus ? 'admin complete' : 'not admin complete'}.`
+        });
+        this.loadTasks(); // Refresh to get updated data
+        
+        // Also refresh selected task if view modal is open
+        if (this.showViewModal && this.selectedTask?.id === task.id) {
+          this.refreshSelectedTask();
+        }
+      },
+      error: (error) => {
+        console.error('Error updating admin complete status:', error);
+        this.messageService.add({
+          severity: 'error', 
+          summary: 'Error', 
+          detail: 'Failed to update admin complete status.'
+        });
+      }
+    });
+  }
 }

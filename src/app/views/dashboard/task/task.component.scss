@@ -715,6 +715,41 @@ td:last-child {
   min-width: 200px !important;
 }
 
+/* Clickable badge styling for admin users */
+.clickable-badge {
+  transition: all 0.2s ease-in-out;
+  user-select: none;
+  position: relative;
+}
+
+.clickable-badge:hover {
+  opacity: 0.8;
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.clickable-badge:active {
+  transform: scale(0.98);
+}
+
+/* Add a subtle animation for status changes */
+c-badge {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Visual indicator for admin-only features - only show on hover */
+.clickable-badge::after {
+  content: ' 🔒';
+  font-size: 0.7em;
+  opacity: 0;
+  margin-left: 2px;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.clickable-badge:hover::after {
+  opacity: 0.7;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   /* Mobile table responsiveness */

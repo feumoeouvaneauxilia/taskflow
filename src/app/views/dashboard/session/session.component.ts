@@ -232,12 +232,14 @@ export class SessionComponent implements AfterViewInit {
         group.memberIds?.includes(currentUserId) || group.managerId === currentUserId
       );
 
-      // Filter tasks to only include validated ones
-      const validatedUserTasks = userTasks.filter((task: Task) => task.isValidated === true);
+      // Filter tasks to only include validated ones that are not admin completed
+      const validatedUserTasks = userTasks.filter((task: Task) => 
+        task.isValidated === true && task.adminComplete !== true
+      );
 
       console.log('Loaded user data:', { userTasks, validatedUserTasks, currentUserData, userGroups });
       console.log('User tasks count:', userTasks.length);
-      console.log('Validated user tasks count:', validatedUserTasks.length);
+      console.log('Validated user tasks count (excluding admin completed):', validatedUserTasks.length);
       console.log('User groups count:', userGroups.length);
 
       // Create nodes with filtered data (validated tasks and groups only, no other users)
@@ -1535,7 +1537,9 @@ export class SessionComponent implements AfterViewInit {
           this.fetchGroupTasks(group.id);
           const tasks = this.groupTasks[group.id];
           if (tasks) {
-            const validatedTasks = tasks.filter(task => task.isValidated === true);
+            const validatedTasks = tasks.filter(task => 
+              task.isValidated === true && task.adminComplete !== true
+            );
             details['Related Tasks'] = validatedTasks.length > 0 
               ? validatedTasks.map(task => `• ${task.name} (${task.status})`).join('\n')
               : 'No validated tasks assigned';
