@@ -1,0 +1,77 @@
+<div class="row">
+  <div class="col-12">
+    <c-card>
+      <c-card-header class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+          <button 
+            cButton 
+            color="outline-primary" 
+            size="sm" 
+            class="me-3" 
+            (click)="goBack()"
+            title="Back to Tasks">
+            <svg [cIcon]="icons.cilArrowLeft" size="sm" class="me-1"></svg>
+            Back
+          </button>
+          <div>
+            <h4 class="mb-0">
+              <svg [cIcon]="icons.cilHistory" size="lg" class="me-2"></svg>
+              Task History
+            </h4>
+            <small class="text-muted">{{ taskName }}</small>
+          </div>
+        </div>
+      </c-card-header>
+      
+      <c-card-body>
+        <!-- Loading state -->
+        <div *ngIf="isLoading" class="text-center py-4">
+          <c-spinner color="primary"></c-spinner>
+          <p class="mt-2 text-muted">Loading task history...</p>
+        </div>
+        
+        <!-- History events -->
+        <div *ngIf="!isLoading && historyEvents.length > 0" class="timeline">
+          <div *ngFor="let event of historyEvents; trackBy: trackByEventId" 
+               class="timeline-item mb-4">
+            <div class="timeline-marker">
+              <svg [cIcon]="getActionIcon(event.action)" size="sm"></svg>
+            </div>
+            <div class="timeline-content">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <c-badge [color]="getActionBadgeColor(event.action)" class="me-2">
+                    {{ event.action.replace('_', ' ') | titlecase }}
+                  </c-badge>
+                  <span class="fw-semibold">{{ event.userName || event.userEmail || 'Unknown User' }}</span>
+                </div>
+                <small class="text-muted">
+                  <svg [cIcon]="icons.cilClock" size="sm" class="me-1"></svg>
+                  {{ formatTimestamp(event.timestamp) }}
+                </small>
+              </div>
+              
+              <p class="mb-1">{{ event.description }}</p>
+              
+              <div *ngIf="event.oldValue || event.newValue" class="small text-muted">
+                <span *ngIf="event.oldValue" class="me-3">
+                  <strong>From:</strong> {{ event.oldValue }}
+                </span>
+                <span *ngIf="event.newValue">
+                  <strong>To:</strong> {{ event.newValue }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Empty state -->
+        <div *ngIf="!isLoading && historyEvents.length === 0" class="text-center py-5">
+          <svg [cIcon]="icons.cilHistory" size="xl" class="text-muted mb-3"></svg>
+          <h5 class="text-muted">No History Available</h5>
+          <p class="text-muted">This task doesn't have any recorded history events yet.</p>
+        </div>
+      </c-card-body>
+    </c-card>
+  </div>
+</div>

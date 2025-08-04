@@ -156,6 +156,9 @@
   <button cButton color="info" size="sm" class="me-1" (click)="openViewModal(task)">
     <svg [cIcon]="icons.cilTask" size="sm" class="me-1"></svg> View
   </button>
+  <button cButton color="dark" size="sm" class="me-1" (click)="openHistoryModal(task)">
+    <svg [cIcon]="icons.cilHistory" size="sm" class="me-1"></svg> History
+  </button>
   <button cButton color="warning" size="sm" class="me-1" (click)="editTask(task)">
     <svg [cIcon]="icons.cilPencil" size="sm" class="me-1"></svg> Edit
   </button>
@@ -561,6 +564,9 @@
     </div>
   </c-modal-body>
   <c-modal-footer>
+    <button cButton color="info" size="sm" class="me-2" (click)="openHistoryModal(selectedTask!)">
+      <svg [cIcon]="icons.cilHistory" size="sm" class="me-1"></svg> View History
+    </button>
     <button cButton color="secondary" size="sm" (click)="showViewModal=false">Close</button>
   </c-modal-footer>
 </c-modal>
