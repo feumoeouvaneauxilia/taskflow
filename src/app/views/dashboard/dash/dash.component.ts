@@ -259,9 +259,13 @@ export class DashComponent implements AfterViewInit {
     console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
     console.log('Center point:', centerX, centerY);
     
+    // Filter tasks to only include validated ones
+    const validatedTasks = tasks.filter(task => task.isValidated === true);
+    console.log(`Filtered ${tasks.length} tasks to ${validatedTasks.length} validated tasks`);
+    
     this.nodes = [];
     const allItems = [
-      ...tasks.map(task => ({ item: task, type: 'task' as const })),
+      ...validatedTasks.map(task => ({ item: task, type: 'task' as const })),
       ...users.map(user => ({ item: user, type: 'user' as const })),
       ...groups.map(group => ({ item: { ...group, members: [] }, type: 'group' as const }))
     ];

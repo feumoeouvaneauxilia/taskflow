@@ -1,5 +1,15 @@
-<p>session works!</p>
 <div class="dashboard-container">
+  <!-- Drag Operation Message -->
+  <div class="drag-message" *ngIf="isDragging && dragMessage" 
+       [class.assign]="dragOperation === 'assign'"
+       [class.unassign]="dragOperation === 'unassign'">
+    <div class="drag-message-icon">
+      <span *ngIf="dragOperation === 'assign'">✓</span>
+      <span *ngIf="dragOperation === 'unassign'">✕</span>
+    </div>
+    <span>{{ dragMessage }}</span>
+  </div>
+
   <div class="graph-canvas-container" [class.panel-open]="isPanelOpen">
     <canvas #graphCanvas 
             [class.dragging]="isDragging"
@@ -10,12 +20,7 @@
   <div class="panel-backdrop" [class.active]="isPanelOpen" (click)="closePanel()"></div>
   
   <!-- Side Panel -->
-  <div class="side-panel" [class.open]="isPanelOpen">
-    <!-- Floating Close Button -->
-    <button class="floating-close-btn" (click)="closePanel()" title="Close Panel (Press Escape)">
-      ✕
-    </button>
-    
+  <div class="side-panel" [class.open]="isPanelOpen">    
     <div class="panel-header">
       <h3>Node Details</h3>
       <button class="close-btn" (click)="closePanel()" title="Close Panel (Press Escape)">
@@ -55,8 +60,30 @@
         <div class="node-properties">
           <div class="property" *ngFor="let prop of getNodeDetails(selectedNodeDetails!) | keyvalue">
             <label>{{ prop.key }}:</label>
-            <span>{{ prop.value }}</span>
+            <span *ngIf="prop.key !== 'Related Tasks'">{{ prop.value }}</span>
+            <!-- Special handling for Related Tasks to display as a list -->
+            <div *ngIf="prop.key === 'Related Tasks'" class="related-tasks">
+              <div *ngIf="prop.value === 'Loading...'" class="loading">Loading...</div>
+              <div *ngIf="prop.value === 'No validated tasks assigned'" class="no-tasks">No validated tasks assigned</div>
+              <div *ngIf="splitRelatedTasks(prop.value).length > 0" class="task-list">
+                <div *ngFor="let task of splitRelatedTasks(prop.value)" class="task-item">
+                  {{ task }}
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <!-- Task Actions -->
+        <div class="node-actions" *ngIf="selectedNodeDetails?.type === 'task'">
+          <button 
+            class="mark-completed-btn"
+            [class.completed]="isTaskCompleted(selectedNodeDetails)"
+            [disabled]="isTaskCompleted(selectedNodeDetails)"
+            (click)="markTaskAsCompleted(selectedNodeDetails)">
+            <span class="btn-icon">{{ isTaskCompleted(selectedNodeDetails) ? '✓' : '⏳' }}</span>
+            <span>{{ isTaskCompleted(selectedNodeDetails) ? 'Task Completed' : 'Mark as Completed' }}</span>
+          </button>
         </div>
       </div>
     </div>
