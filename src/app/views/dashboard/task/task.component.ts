@@ -1,5 +1,5 @@
 import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors, ValidatorFn, FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { 
   AlignDirective, 
@@ -84,7 +84,8 @@ interface ITaskData {
     IconDirective,
     ReactiveFormsModule,
     CommonModule,
-    ToastModule
+    ToastModule,
+    FormsModule
   ],
   providers: [MessageService],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -143,6 +144,12 @@ export class TaskComponent implements OnInit {
   showEditModal = false;
   showUserModal = false;
   showGroupModal = false;
+
+  // Admin Not Complete modal state
+  showAdminNotCompleteModal = false;
+  adminNotCompleteMessage = '';
+  adminNotCompleteTask: ITaskData | null = null;
+  isSubmittingAdminNotComplete = false;
 
   constructor(
     private taskService: TaskService, 
@@ -462,7 +469,6 @@ export class TaskComponent implements OnInit {
     this.selectedTask = task;
     this.showEditModal = true;
   }
-  closeEditModal(): void { this.showEditModal = false; }
   openUserModal(task: ITaskData): void {
     this.selectedTask = task;
     this.selectedUsers = [...(task.assignedUserIds || [])];
@@ -487,6 +493,46 @@ export class TaskComponent implements OnInit {
     this.selectedGroups = [];
     this.originalSelectedGroups = [];
     this.newGroupsToAssign = [];
+  }
+
+  // Open modal to capture optional message instead of window.prompt
+  openAdminNotCompleteModal(task: ITaskData): void {
+    if (!this.isAdmin() || !task.id) {
+      this.messageService.add({severity: 'warn', summary: 'Access Denied', detail: 'Only administrators can mark not complete.'});
+      return;
+    }
+    this.adminNotCompleteTask = task;
+    this.adminNotCompleteMessage = '';
+    this.showAdminNotCompleteModal = true;
+  }
+
+  // Confirm Admin Not Complete from modal
+  confirmAdminNotComplete(): void {
+    const task = this.adminNotCompleteTask;
+    const id = task?.id;
+    if (!task || !id) return;
+
+    this.isSubmittingAdminNotComplete = true;
+
+    this.taskService.adminNotCompleteTask(id, this.adminNotCompleteMessage || '').subscribe({
+      next: () => {
+        task.adminComplete = false;
+        this.messageService.add({severity: 'success', summary: 'Success', detail: 'Marked as not complete. Assigned users notified.'});
+        this.loadTasks();
+        if (this.showViewModal && this.selectedTask?.id === id) this.refreshSelectedTask();
+        this.closeAdminNotCompleteModal();
+      },
+      error: () => this.messageService.add({severity: 'error', summary: 'Error', detail: 'Failed to mark not complete.'}),
+      complete: () => { this.isSubmittingAdminNotComplete = false; }
+    });
+  }
+
+  // Close modal and reset state
+  closeAdminNotCompleteModal(): void {
+    this.showAdminNotCompleteModal = false;
+    this.adminNotCompleteMessage = '';
+    this.adminNotCompleteTask = null;
+    this.isSubmittingAdminNotComplete = false;
   }
 
   // Handle user assignment changes in dedicated modal
@@ -873,6 +919,28 @@ export class TaskComponent implements OnInit {
     }).finally(() => {
       this.isUpdatingAssignments = false;
     });
+  }
+
+  // Mark task as admin complete
+  markAdminComplete(task: ITaskData): void {
+    if (!this.isAdmin() || !task.id) {
+      this.messageService.add({severity: 'warn', summary: 'Access Denied', detail: 'Only administrators can mark admin complete.'});
+      return;
+    }
+    this.taskService.adminCompleteTask(task.id, true).subscribe({
+      next: () => {
+        task.adminComplete = true;
+        this.messageService.add({severity: 'success', summary: 'Success', detail: 'Task marked as admin complete.'});
+        this.loadTasks();
+        if (this.showViewModal && this.selectedTask?.id === task.id) this.refreshSelectedTask();
+      },
+      error: () => this.messageService.add({severity: 'error', summary: 'Error', detail: 'Failed to mark as admin complete.'})
+    });
+  }
+
+  // Mark task as not complete (admin only)
+  markAdminNotComplete(task: ITaskData): void {
+    this.openAdminNotCompleteModal(task);
   }
 
   // Check if current user has admin role

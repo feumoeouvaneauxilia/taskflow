@@ -106,7 +106,6 @@
                   <div class="d-inline">
                     Admin Complete
                     <svg [cIcon]="icons.cilBadge" size="sm" class="ms-1 text-danger"></svg>
-                    <small *ngIf="isAdmin()" class="text-muted ms-1">(clickable)</small>
                   </div>
                 </th>
                 <th>
@@ -142,33 +141,33 @@
                   </c-badge>
                 </td>
                 <td>
-                  <c-badge 
-                    [color]="task.adminComplete ? 'success' : 'danger'"
-                    [ngClass]="{'clickable-badge': isAdmin()}"
-                    [style.cursor]="isAdmin() ? 'pointer' : 'default'"
-                    [title]="isAdmin() ? 'Click to toggle admin complete status' : ''"
-                    (click)="isAdmin() ? toggleAdminComplete(task) : null"
-                  >
-                    {{ task.adminComplete ? 'Yes' : 'No' }}
-                  </c-badge>
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <c-badge [color]="task.adminComplete ? 'success' : 'danger'">
+                      {{ task.adminComplete ? 'Complete' : 'Not complete' }}
+                    </c-badge>
+                    <ng-container *ngIf="isAdmin()">
+                      <button cButton size="sm" color="success" variant="outline" (click)="markAdminComplete(task)" [disabled]="task.adminComplete">Complete</button>
+                      <button cButton size="sm" color="danger" variant="outline" (click)="markAdminNotComplete(task)" [disabled]="!task.adminComplete">Not Complete</button>
+                    </ng-container>
+                  </div>
                 </td>
-<td>
-  <button cButton color="info" size="sm" class="me-1" (click)="openViewModal(task)">
-    <svg [cIcon]="icons.cilTask" size="sm" class="me-1"></svg> View
-  </button>
-  <button cButton color="dark" size="sm" class="me-1" (click)="openHistoryModal(task)">
-    <svg [cIcon]="icons.cilHistory" size="sm" class="me-1"></svg> History
-  </button>
-  <button cButton color="warning" size="sm" class="me-1" (click)="editTask(task)">
-    <svg [cIcon]="icons.cilPencil" size="sm" class="me-1"></svg> Edit
-  </button>
-  <button cButton color="success" size="sm" class="me-1" (click)="openUserModal(task)">
-    <svg [cIcon]="icons.cilUser" size="sm" class="me-1"></svg> Users
-  </button>
-  <button cButton color="secondary" size="sm" (click)="openGroupModal(task)">
-    <svg [cIcon]="icons.cilPeople" size="sm" class="me-1"></svg> Groups
-  </button>
-</td>
+                <td>
+                  <button cButton color="info" size="sm" class="me-1" (click)="openViewModal(task)">
+                    <svg [cIcon]="icons.cilTask" size="sm" class="me-1"></svg> View
+                  </button>
+                  <button cButton color="dark" size="sm" class="me-1" (click)="openHistoryModal(task)">
+                    <svg [cIcon]="icons.cilHistory" size="sm" class="me-1"></svg> History
+                  </button>
+                  <button cButton color="warning" size="sm" class="me-1" (click)="editTask(task)">
+                    <svg [cIcon]="icons.cilPencil" size="sm" class="me-1"></svg> Edit
+                  </button>
+                  <button cButton color="success" size="sm" class="me-1" (click)="openUserModal(task)">
+                    <svg [cIcon]="icons.cilUser" size="sm" class="me-1"></svg> Users
+                  </button>
+                  <button cButton color="secondary" size="sm" (click)="openGroupModal(task)">
+                    <svg [cIcon]="icons.cilPeople" size="sm" class="me-1"></svg> Groups
+                  </button>
+                </td>
               </tr>
               <tr *ngIf="paginatedTasks.length === 0 && !isLoading">
                 <td colspan="10" class="text-center">
@@ -520,16 +519,13 @@
         <small *ngIf="isAdmin()" class="text-muted ms-2">(click to toggle)</small>
       </p>
       <p><strong>Admin Complete:</strong> 
-        <c-badge 
-          [color]="selectedTask.adminComplete ? 'success' : 'danger'"
-          [ngClass]="{'clickable-badge': isAdmin()}"
-          [style.cursor]="isAdmin() ? 'pointer' : 'default'"
-          [title]="isAdmin() ? 'Click to toggle admin complete status' : ''"
-          (click)="isAdmin() ? toggleAdminComplete(selectedTask) : null"
-        >
-          {{ selectedTask.adminComplete ? 'Yes' : 'No' }}
+        <c-badge [color]="selectedTask.adminComplete ? 'success' : 'danger'">
+          {{ selectedTask.adminComplete ? 'Complete' : 'Not complete' }}
         </c-badge>
-        <small *ngIf="isAdmin()" class="text-muted ms-2">(click to toggle)</small>
+        <ng-container *ngIf="isAdmin()">
+          <button cButton size="sm" color="success" variant="outline" class="ms-2" (click)="markAdminComplete(selectedTask)" [disabled]="selectedTask.adminComplete">Complete</button>
+          <button cButton size="sm" color="danger" variant="outline" class="ms-1" (click)="markAdminNotComplete(selectedTask)" [disabled]="!selectedTask.adminComplete">Not Complete</button>
+        </ng-container>
       </p>
       
       <hr />
@@ -571,5 +567,29 @@
   </c-modal-footer>
 </c-modal>
 
+<!-- Admin Not Complete Modal -->
+<c-modal [(visible)]="showAdminNotCompleteModal" backdrop="static" size="sm">
+  <c-modal-header>
+    <h4 cModalTitle>Mark as Not Complete</h4>
+    <button cButtonClose (click)="closeAdminNotCompleteModal()" aria-label="Close"></button>
+  </c-modal-header>
+  <c-modal-body>
+    <p class="mb-2">Optionally include a message to the assigned users:</p>
+    <textarea
+      class="form-control"
+      rows="3"
+      [(ngModel)]="adminNotCompleteMessage"
+      placeholder="Enter an optional message..."
+    ></textarea>
+  </c-modal-body>
+  <c-modal-footer>
+    <button cButton color="secondary" size="sm" (click)="closeAdminNotCompleteModal()" [disabled]="isSubmittingAdminNotComplete">Cancel</button>
+    <button cButton color="danger" size="sm" (click)="confirmAdminNotComplete()" [disabled]="isSubmittingAdminNotComplete">
+      <c-spinner *ngIf="isSubmittingAdminNotComplete" size="sm" class="me-1"></c-spinner>
+      Confirm
+    </button>
+  </c-modal-footer>
+</c-modal>
+
 <!-- Toast Notifications -->
-<p-toast></p-toast> <!-- Add this line for toast notifications -->
+<p-toast></p-toast>

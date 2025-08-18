@@ -81,6 +81,12 @@ export class TaskService {
     });
   }
 
+  adminNotCompleteTask(id: string, message?: string): Observable<any> {
+    return this.http.patch<any>(`${environment.baseUrl}/task/${id}/admin-not-complete`, { message }, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
   assignUser(id: string, userId: string): Observable<any> {
     return this.http.patch<any>(`${environment.baseUrl}/task/${id}/assign/${userId}`, {}, {
       headers: this.getAuthHeaders()
