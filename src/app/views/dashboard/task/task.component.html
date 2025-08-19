@@ -99,7 +99,7 @@
                   <div class="d-inline">
                     Validated
                     <svg [cIcon]="icons.cilShieldAlt" size="sm" class="ms-1 text-danger"></svg>
-                    <small *ngIf="isAdmin()" class="text-muted ms-1">(clickable)</small>
+                    <small *ngIf="isAdmin()" class="text-muted ms-1">(admin/manager clickable)</small>
                   </div>
                 </th>
                 <th>
@@ -132,10 +132,10 @@
                 <td>
                   <c-badge 
                     [color]="task.isValidated ? 'success' : 'danger'"
-                    [ngClass]="{'clickable-badge': isAdmin()}"
-                    [style.cursor]="isAdmin() ? 'pointer' : 'default'"
-                    [title]="isAdmin() ? 'Click to toggle validation status' : ''"
-                    (click)="isAdmin() ? toggleValidation(task) : null"
+                    [ngClass]="{'clickable-badge': canManageTask(task)}"
+                    [style.cursor]="canManageTask(task) ? 'pointer' : 'default'"
+                    [title]="canManageTask(task) ? 'Click to toggle validation status' : ''"
+                    (click)="canManageTask(task) ? toggleValidation(task) : null"
                   >
                     {{ task.isValidated ? 'Yes' : 'No' }}
                   </c-badge>
@@ -145,7 +145,7 @@
                     <c-badge [color]="task.adminComplete ? 'success' : 'danger'">
                       {{ task.adminComplete ? 'Complete' : 'Not complete' }}
                     </c-badge>
-                    <ng-container *ngIf="isAdmin()">
+                    <ng-container *ngIf="canManageTask(task)">
                       <button cButton size="sm" color="success" variant="outline" (click)="markAdminComplete(task)" [disabled]="task.adminComplete">Complete</button>
                       <button cButton size="sm" color="danger" variant="outline" (click)="markAdminNotComplete(task)" [disabled]="!task.adminComplete">Not Complete</button>
                     </ng-container>
@@ -509,20 +509,20 @@
       <p><strong>Validated:</strong> 
         <c-badge 
           [color]="selectedTask.isValidated ? 'success' : 'danger'"
-          [ngClass]="{'clickable-badge': isAdmin()}"
-          [style.cursor]="isAdmin() ? 'pointer' : 'default'"
-          [title]="isAdmin() ? 'Click to toggle validation status' : ''"
-          (click)="isAdmin() ? toggleValidation(selectedTask) : null"
+          [ngClass]="{'clickable-badge': canManageTask(selectedTask)}"
+          [style.cursor]="canManageTask(selectedTask) ? 'pointer' : 'default'"
+          [title]="canManageTask(selectedTask) ? 'Click to toggle validation status' : ''"
+          (click)="canManageTask(selectedTask) ? toggleValidation(selectedTask) : null"
         >
           {{ selectedTask.isValidated ? 'Yes' : 'No' }}
         </c-badge>
-        <small *ngIf="isAdmin()" class="text-muted ms-2">(click to toggle)</small>
+        <small *ngIf="canManageTask(selectedTask)" class="text-muted ms-2">(click to toggle)</small>
       </p>
       <p><strong>Admin Complete:</strong> 
         <c-badge [color]="selectedTask.adminComplete ? 'success' : 'danger'">
           {{ selectedTask.adminComplete ? 'Complete' : 'Not complete' }}
         </c-badge>
-        <ng-container *ngIf="isAdmin()">
+        <ng-container *ngIf="canManageTask(selectedTask)">
           <button cButton size="sm" color="success" variant="outline" class="ms-2" (click)="markAdminComplete(selectedTask)" [disabled]="selectedTask.adminComplete">Complete</button>
           <button cButton size="sm" color="danger" variant="outline" class="ms-1" (click)="markAdminNotComplete(selectedTask)" [disabled]="!selectedTask.adminComplete">Not Complete</button>
         </ng-container>

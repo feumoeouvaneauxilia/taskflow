@@ -11,6 +11,9 @@
     >
       <svg cIcon name="cilMenu" size="lg"></svg>
     </button>
+
+    <!-- Filter Button -->
+   
   
     <c-header-nav class="d-none d-md-flex ms-auto ">
       <ng-container *ngTemplateOutlet="notificationDropdown" />
@@ -32,8 +35,28 @@
 
   </c-container>
   <c-container [fluid]="true" class="px-4">
-    <h1 class="h5 my-2">🔥Better Management🔥</h1>
+    <h1 class="h5 my-2">🔥Better Management🔥 </h1>
+     <div class="ms-3">
+      <button 
+        class="btn btn-outline-primary position-relative"
+        (click)="toggleFilter()"
+        [class.active]="isFilterOpen"
+        title="Toggle Filters (Ctrl+F)"
+      >
+        <svg cIcon name="cilFilter" size="sm" class="me-1"></svg>
+        Filters
+        <c-badge 
+          *ngIf="activeFiltersCount > 0"
+          class="position-absolute top-0 start-100 translate-middle rounded-pill"
+          color="warning"
+          style="font-size: 0.6em; padding: 0.25em 0.4em;"
+        >
+          {{ activeFiltersCount }}
+        </c-badge>
+      </button>
+    </div>
   </c-container>
+  
 </ng-container>
 <!--</c-header>-->
 

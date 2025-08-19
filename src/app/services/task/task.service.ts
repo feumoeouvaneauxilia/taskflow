@@ -128,4 +128,11 @@ export class TaskService {
       headers: this.getAuthHeaders()
     });
   }
+
+  // Check if current user is group manager for this task
+  isGroupManagerForTask(taskId: string): Observable<boolean> {
+    return this.http.get<boolean>(`${environment.baseUrl}/task/${taskId}/is-group-manager`, {
+      headers: this.getAuthHeaders()
+    });
+  }
 }

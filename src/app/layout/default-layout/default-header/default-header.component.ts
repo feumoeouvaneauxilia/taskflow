@@ -55,6 +55,10 @@ export class DefaultHeaderComponent extends HeaderComponent implements OnInit, O
     return this.colorModes.find(mode => mode.name === currentMode)?.icon ?? 'cilSun';
   });
 
+  // Filter-related properties
+  isFilterOpen = false;
+  activeFiltersCount = 0;
+
   constructor(
     private authService: AuthService,
     private notificationService: NotificationService
@@ -77,6 +81,9 @@ export class DefaultHeaderComponent extends HeaderComponent implements OnInit, O
     
     // Subscribe to unread count changes to detect new notifications
     this.subscribeToNotificationChanges();
+    
+    // Listen for filter state changes from dashboard
+    window.addEventListener('filter-state-changed', this.filterStateHandler);
   }
 
   /**
@@ -90,8 +97,21 @@ export class DefaultHeaderComponent extends HeaderComponent implements OnInit, O
     }
   }
 
+  private filterStateHandler = (event: Event) => {
+    this.handleFilterStateChange(event as CustomEvent);
+  };
+
   ngOnDestroy(): void {
     // Cleanup is handled by the notification service
+    window.removeEventListener('filter-state-changed', this.filterStateHandler);
+  }
+
+  /**
+   * Handle filter state changes from dashboard
+   */
+  private handleFilterStateChange(event: CustomEvent): void {
+    this.isFilterOpen = event.detail.isOpen;
+    this.activeFiltersCount = event.detail.activeFiltersCount;
   }
 
   /**
@@ -238,6 +258,17 @@ export class DefaultHeaderComponent extends HeaderComponent implements OnInit, O
 
   formatNotificationTime(date: Date): string {
     return this.notificationService.formatNotificationTime(date);
+  }
+
+  /**
+   * Toggle filter panel
+   */
+  toggleFilter(): void {
+    this.isFilterOpen = !this.isFilterOpen;
+    // Emit event to dashboard component
+    window.dispatchEvent(new CustomEvent('toggle-filter', { 
+      detail: { isOpen: this.isFilterOpen } 
+    }));
   }
 
   sidebarId = input('sidebar1');

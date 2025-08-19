@@ -51,6 +51,7 @@ interface ITaskData {
   createdById?: string;
   isValidated?: boolean;
   adminComplete?: boolean;
+  isGroupManager?: boolean; // Flag to indicate if current user is group manager for this task
 }
 
 @Component({
@@ -227,12 +228,29 @@ export class TaskComponent implements OnInit {
           adminComplete: task.adminComplete
         }));
         this.loadUserNames();
+        this.checkGroupManagerStatus(); // Check group manager status for all tasks
         this.applyFiltersAndPagination();
         this.isLoading = false;
       },
       error: (error) => {
         this.messageService.add({severity: 'error', summary: 'Error', detail: 'Failed to load tasks.'});
         this.isLoading = false;
+      }
+    });
+  }
+
+  // Check group manager status for all tasks
+  checkGroupManagerStatus(): void {
+    this.taskData.forEach(task => {
+      if (task.id) {
+        this.taskService.isGroupManagerForTask(task.id).subscribe({
+          next: (isManager) => {
+            task.isGroupManager = isManager;
+          },
+          error: () => {
+            task.isGroupManager = false;
+          }
+        });
       }
     });
   }
@@ -313,6 +331,24 @@ export class TaskComponent implements OnInit {
     this.selectedUsers = [...(task.assignedUserIds || [])];
     this.selectedGroups = []; // assume task.assignedGroupIds not stored; user can select
     this.showViewModal = true;
+    
+    // Check group manager status if not already checked
+    if (task.id && task.isGroupManager === undefined) {
+      this.taskService.isGroupManagerForTask(task.id).subscribe({
+        next: (isManager) => {
+          task.isGroupManager = isManager;
+          if (this.selectedTask && this.selectedTask.id === task.id) {
+            this.selectedTask.isGroupManager = isManager;
+          }
+        },
+        error: () => {
+          task.isGroupManager = false;
+          if (this.selectedTask && this.selectedTask.id === task.id) {
+            this.selectedTask.isGroupManager = false;
+          }
+        }
+      });
+    }
   }
 
   /** Handle change in assigned users from view modal */
@@ -497,8 +533,8 @@ export class TaskComponent implements OnInit {
 
   // Open modal to capture optional message instead of window.prompt
   openAdminNotCompleteModal(task: ITaskData): void {
-    if (!this.isAdmin() || !task.id) {
-      this.messageService.add({severity: 'warn', summary: 'Access Denied', detail: 'Only administrators can mark not complete.'});
+    if (!this.canManageTask(task) || !task.id) {
+      this.messageService.add({severity: 'warn', summary: 'Access Denied', detail: 'Only administrators or group managers can mark not complete.'});
       return;
     }
     this.adminNotCompleteTask = task;
@@ -818,6 +854,16 @@ export class TaskComponent implements OnInit {
           isValidated: updatedTask.isValidated,
           adminComplete: updatedTask.adminComplete
         };
+        
+        // Check group manager status for the refreshed task
+        this.taskService.isGroupManagerForTask(this.selectedTask.id!).subscribe({
+          next: (isManager) => {
+            this.selectedTask!.isGroupManager = isManager;
+          },
+          error: () => {
+            this.selectedTask!.isGroupManager = false;
+          }
+        });
       },
       error: (error) => {
         console.error('Error refreshing task:', error);
@@ -923,8 +969,8 @@ export class TaskComponent implements OnInit {
 
   // Mark task as admin complete
   markAdminComplete(task: ITaskData): void {
-    if (!this.isAdmin() || !task.id) {
-      this.messageService.add({severity: 'warn', summary: 'Access Denied', detail: 'Only administrators can mark admin complete.'});
+    if (!this.canManageTask(task) || !task.id) {
+      this.messageService.add({severity: 'warn', summary: 'Access Denied', detail: 'Only administrators or group managers can mark admin complete.'});
       return;
     }
     this.taskService.adminCompleteTask(task.id, true).subscribe({
@@ -950,13 +996,24 @@ export class TaskComponent implements OnInit {
     return roles.includes('ROLE_ADMIN'.toLowerCase()) || roles.includes('role_admin');
   }
 
-  // Toggle task validation status (admin only)
+  // Check if current user is group manager for a specific task
+  isGroupManagerForTask(task: ITaskData): boolean {
+    // This will be populated when we load task details
+    return (task as any).isGroupManager || false;
+  }
+
+  // Check if current user can manage this task (admin or group manager)
+  canManageTask(task: ITaskData): boolean {
+    return this.isAdmin() || this.isGroupManagerForTask(task);
+  }
+
+  // Toggle task validation status (admin or group manager only)
   toggleValidation(task: ITaskData): void {
-    if (!this.isAdmin() || !task.id) {
+    if (!this.canManageTask(task) || !task.id) {
       this.messageService.add({
         severity: 'warn', 
         summary: 'Access Denied', 
-        detail: 'Only administrators can change validation status.'
+        detail: 'Only administrators or group managers can change validation status.'
       });
       return;
     }
@@ -969,7 +1026,7 @@ export class TaskComponent implements OnInit {
         this.recordHistoryEvent(
           task.id!,
           newValidationStatus ? 'VALIDATED' : 'UNVALIDATED',
-          `Task ${newValidationStatus ? 'validated' : 'unvalidated'} by admin`,
+          `Task ${newValidationStatus ? 'validated' : 'unvalidated'} by ${this.isAdmin() ? 'admin' : 'group manager'}`,
           task.isValidated?.toString(),
           newValidationStatus.toString()
         );
@@ -998,13 +1055,13 @@ export class TaskComponent implements OnInit {
     });
   }
 
-  // Toggle admin complete status (admin only)
+  // Toggle admin complete status (admin or group manager only)
   toggleAdminComplete(task: ITaskData): void {
-    if (!this.isAdmin() || !task.id) {
+    if (!this.canManageTask(task) || !task.id) {
       this.messageService.add({
         severity: 'warn', 
         summary: 'Access Denied', 
-        detail: 'Only administrators can change admin complete status.'
+        detail: 'Only administrators or group managers can change admin complete status.'
       });
       return;
     }
@@ -1017,7 +1074,7 @@ export class TaskComponent implements OnInit {
         this.recordHistoryEvent(
           task.id!,
           newAdminCompleteStatus ? 'ADMIN_COMPLETED' : 'ADMIN_UNCOMPLETED',
-          `Task ${newAdminCompleteStatus ? 'marked as admin complete' : 'admin complete status removed'} by admin`,
+          `Task ${newAdminCompleteStatus ? 'marked as admin complete' : 'admin complete status removed'} by ${this.isAdmin() ? 'admin' : 'group manager'}`,
           task.adminComplete?.toString(),
           newAdminCompleteStatus.toString()
         );

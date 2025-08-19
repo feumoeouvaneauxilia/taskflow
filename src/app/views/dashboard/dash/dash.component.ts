@@ -1,9 +1,9 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, HostListener, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, HostListener, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { TaskService } from '../../../services/task/task.service';
 import { UserService } from '../../../services/user/user.service';
 import { GroupService, Group as GroupInterface, AddMembersDto } from '../../../services/group/group.service';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common'; 
+import { CommonModule, TitleCasePipe } from '@angular/common'; 
 
 interface Task {
   id?: string;
@@ -53,13 +53,51 @@ interface Node {
   shadowColor: string;
 }
 
+// Filter interfaces for type safety
+interface TaskStatusFilter {
+  all: boolean;
+  pending: boolean;
+  in_progress: boolean;
+  completed: boolean;
+  archived: boolean;
+  [key: string]: boolean; // Add index signature
+}
+
+interface UserStatusFilter {
+  all: boolean;
+  active: boolean;
+  inactive: boolean;
+  [key: string]: boolean; // Add index signature
+}
+
+interface GroupStatusFilter {
+  all: boolean;
+  active: boolean;
+  inactive: boolean;
+  [key: string]: boolean; // Add index signature
+}
+
+interface AssignmentStatusFilter {
+  all: boolean;
+  assigned: boolean;
+  unassigned: boolean;
+  [key: string]: boolean; // Add index signature
+}
+
+interface NodeTypesFilter {
+  task: boolean;
+  user: boolean;
+  group: boolean;
+  [key: string]: boolean; // Add index signature
+}
+
 @Component({
   selector: 'app-dash',
   templateUrl: './dash.component.html',
   styleUrls: ['./dash.component.scss'],
-  imports: [FormsModule, CommonModule]
+  imports: [FormsModule, CommonModule, TitleCasePipe]
 })
-export class DashComponent implements AfterViewInit {
+export class DashComponent implements AfterViewInit, OnDestroy {
   @ViewChild('graphCanvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
 
   nodes: Node[] = [];
@@ -93,6 +131,51 @@ export class DashComponent implements AfterViewInit {
   dropTargetNode: Node | null = null;
   dragOperation: 'assign' | 'unassign' | null = null;
   dragMessage: string = '';
+
+  // Filtering properties
+  isFilterPanelOpen = false;
+  filteredNodes: Node[] = [];
+  allNodes: Node[] = []; // Store all nodes before filtering
+  
+  // Filter criteria
+  filters = {
+    nodeTypes: {
+      task: true,
+      user: true,
+      group: true
+    } as NodeTypesFilter,
+    taskStatus: {
+      all: true,
+      pending: false,
+      in_progress: false,
+      completed: false,
+      archived: false
+    } as TaskStatusFilter,
+    userStatus: {
+      all: true,
+      active: false,
+      inactive: false
+    } as UserStatusFilter,
+    groupStatus: {
+      all: true,
+      active: false,
+      inactive: false
+    } as GroupStatusFilter,
+    searchTerm: '',
+    dateRange: {
+      startDate: '',
+      endDate: ''
+    },
+    assignmentStatus: {
+      all: true,
+      assigned: false,
+      unassigned: false
+    } as AssignmentStatusFilter
+  };
+
+  // Available filter options for dropdowns
+  readonly TASK_STATUSES = ['pending', 'in_progress', 'completed', 'archived'];
+  readonly USER_ROLES = ['admin', 'manager', 'user'];
 
   // Premium color palette with high contrast
   readonly COLORS = {
@@ -128,10 +211,30 @@ export class DashComponent implements AfterViewInit {
     private cdr: ChangeDetectorRef
   ) {}
 
+  private headerFilterHandler = (event: Event) => {
+    this.handleHeaderFilterToggle(event as CustomEvent);
+  };
+
   ngAfterViewInit() {
     this.resizeCanvas();
     this.attachCanvasEvents();
     this.loadData();
+    
+    // Listen for filter toggle events from header
+    window.addEventListener('toggle-filter', this.headerFilterHandler);
+  }
+
+  ngOnDestroy() {
+    // Clean up event listeners
+    window.removeEventListener('toggle-filter', this.headerFilterHandler);
+  }
+
+  /**
+   * Handle filter toggle events from header
+   */
+  private handleHeaderFilterToggle(event: CustomEvent): void {
+    this.isFilterPanelOpen = event.detail.isOpen;
+    this.resizeCanvas();
   }
 
   @HostListener('window:resize')
@@ -147,11 +250,17 @@ export class DashComponent implements AfterViewInit {
       return;
     }
     
-    // Update container class for panel state
+    // Update container class for panel states
     if (this.isPanelOpen) {
       container.classList.add('panel-open');
     } else {
       container.classList.remove('panel-open');
+    }
+    
+    if (this.isFilterPanelOpen) {
+      container.classList.add('filter-panel-open');
+    } else {
+      container.classList.remove('filter-panel-open');
     }
     
     console.log('Canvas offsetWidth:', canvas.offsetWidth, 'offsetHeight:', canvas.offsetHeight);
@@ -186,9 +295,19 @@ export class DashComponent implements AfterViewInit {
 
   @HostListener('document:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent) {
-    // Close panel when Escape key is pressed
-    if (event.key === 'Escape' && this.isPanelOpen) {
-      this.closePanel();
+    // Close panels when Escape key is pressed
+    if (event.key === 'Escape') {
+      if (this.isPanelOpen) {
+        this.closePanel();
+      } else if (this.isFilterPanelOpen) {
+        this.toggleFilterPanel();
+      }
+    }
+    
+    // Toggle filter panel with Ctrl+F or Cmd+F (prevent default browser search)
+    if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+      event.preventDefault();
+      this.toggleFilterPanel();
     }
   }
 
@@ -245,7 +364,8 @@ export class DashComponent implements AfterViewInit {
     );
     console.log(`Filtered ${tasks.length} tasks to ${validatedTasks.length} validated tasks (excluding admin completed)`);
     
-    this.nodes = [];
+    // Create all nodes first (store in allNodes)
+    this.allNodes = [];
     const allItems = [
       ...validatedTasks.map(task => ({ item: task, type: 'task' as const })),
       ...users.map(user => ({ item: user, type: 'user' as const })),
@@ -282,11 +402,13 @@ export class DashComponent implements AfterViewInit {
         color: node.color
       });
 
-      this.nodes.push(node);
+      this.allNodes.push(node);
     });
 
-    console.log('Total nodes created:', this.nodes.length);
-    this.draw();
+    console.log('Total nodes created:', this.allNodes.length);
+    
+    // Apply initial filters
+    this.applyFilters();
   }
 
   attachCanvasEvents() {
@@ -1477,5 +1599,480 @@ export class DashComponent implements AfterViewInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  // ======================== FILTERING METHODS ========================
+
+  /**
+   * Toggle filter panel visibility
+   */
+  toggleFilterPanel(): void {
+    this.isFilterPanelOpen = !this.isFilterPanelOpen;
+    
+    // Emit filter state to header
+    window.dispatchEvent(new CustomEvent('filter-state-changed', { 
+      detail: { 
+        isOpen: this.isFilterPanelOpen,
+        activeFiltersCount: this.getActiveFiltersCount()
+      } 
+    }));
+    
+    // Auto-focus search input when panel opens
+    if (this.isFilterPanelOpen) {
+      setTimeout(() => {
+        const searchInput = document.querySelector('.search-input') as HTMLInputElement;
+        if (searchInput) {
+          searchInput.focus();
+        }
+      }, 150);
+    }
+    
+    // Trigger canvas resize to accommodate filter panel
+    setTimeout(() => this.resizeCanvas(), 100);
+  }
+
+  /**
+   * Helper method to safely check if a task status filter is active
+   */
+  isTaskStatusActive(status: string): boolean {
+    return this.filters.taskStatus[status] || false;
+  }
+
+  /**
+   * Helper method to safely check if a user status filter is active
+   */
+  isUserStatusActive(status: string): boolean {
+    return this.filters.userStatus[status] || false;
+  }
+
+  /**
+   * Helper method to safely check if a group status filter is active
+   */
+  isGroupStatusActive(status: string): boolean {
+    return this.filters.groupStatus[status] || false;
+  }
+
+  /**
+   * Helper method to safely check if an assignment status filter is active
+   */
+  isAssignmentStatusActive(status: string): boolean {
+    return this.filters.assignmentStatus[status] || false;
+  }
+
+  /**
+   * Apply all active filters to the nodes
+   */
+  applyFilters(): void {
+    console.log('Applying filters...');
+    
+    this.filteredNodes = this.allNodes.filter(node => {
+      // Node type filter
+      if (!this.filters.nodeTypes[node.type]) {
+        return false;
+      }
+
+      // Search term filter
+      if (this.filters.searchTerm) {
+        const searchTerm = this.filters.searchTerm.toLowerCase();
+        const nodeLabel = node.label.toLowerCase();
+        let searchableText = nodeLabel;
+
+        // Add additional searchable fields based on node type
+        if (node.type === 'task') {
+          const task = node.data as Task;
+          searchableText += ` ${task.description || ''} ${task.status || ''}`.toLowerCase();
+        } else if (node.type === 'user') {
+          const user = node.data as User;
+          searchableText += ` ${user.email || ''} ${user.roles?.join(' ') || ''}`.toLowerCase();
+        } else if (node.type === 'group') {
+          const group = node.data as Group;
+          searchableText += ` ${group.description || ''}`.toLowerCase();
+        }
+
+        if (!searchableText.includes(searchTerm)) {
+          return false;
+        }
+      }
+
+      // Task-specific filters
+      if (node.type === 'task') {
+        const task = node.data as Task;
+        
+        // Task status filter
+        if (!this.filters.taskStatus.all) {
+          const statusMatches = Object.keys(this.filters.taskStatus)
+            .filter(key => key !== 'all' && this.filters.taskStatus[key as keyof typeof this.filters.taskStatus])
+            .includes(task.status);
+          
+          if (!statusMatches) {
+            return false;
+          }
+        }
+
+        // Assignment status filter
+        if (!this.filters.assignmentStatus.all) {
+          const isAssigned = (task.assignedUserIds && task.assignedUserIds.length > 0) || 
+                           (task.assignedGroupIds && task.assignedGroupIds.length > 0);
+          
+          if (this.filters.assignmentStatus.assigned && !isAssigned) {
+            return false;
+          }
+          if (this.filters.assignmentStatus.unassigned && isAssigned) {
+            return false;
+          }
+        }
+
+        // Date range filter
+        if (this.filters.dateRange.startDate || this.filters.dateRange.endDate) {
+          const taskDate = task.dueAt || task.startAt;
+          if (taskDate) {
+            const taskDateTime = new Date(taskDate).getTime();
+            
+            if (this.filters.dateRange.startDate) {
+              const startTime = new Date(this.filters.dateRange.startDate).getTime();
+              if (taskDateTime < startTime) {
+                return false;
+              }
+            }
+            
+            if (this.filters.dateRange.endDate) {
+              const endTime = new Date(this.filters.dateRange.endDate).getTime();
+              if (taskDateTime > endTime) {
+                return false;
+              }
+            }
+          }
+        }
+      }
+
+      // User-specific filters
+      if (node.type === 'user') {
+        const user = node.data as User;
+        
+        // User status filter
+        if (!this.filters.userStatus.all) {
+          if (this.filters.userStatus.active && !user.isActive) {
+            return false;
+          }
+          if (this.filters.userStatus.inactive && user.isActive) {
+            return false;
+          }
+        }
+      }
+
+      // Group-specific filters
+      if (node.type === 'group') {
+        const group = node.data as Group;
+        
+        // Group status filter
+        if (!this.filters.groupStatus.all) {
+          if (this.filters.groupStatus.active && !group.isActive) {
+            return false;
+          }
+          if (this.filters.groupStatus.inactive && group.isActive) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+
+    // Update nodes reference to filtered nodes
+    this.nodes = this.filteredNodes;
+    
+    console.log(`Filtered ${this.allNodes.length} nodes to ${this.filteredNodes.length} nodes`);
+    
+    // Emit filter count to header
+    window.dispatchEvent(new CustomEvent('filter-state-changed', { 
+      detail: { 
+        isOpen: this.isFilterPanelOpen,
+        activeFiltersCount: this.getActiveFiltersCount()
+      } 
+    }));
+    
+    // Redraw the canvas with filtered nodes
+    this.draw();
+  }
+
+  /**
+   * Reset all filters to default state
+   */
+  resetFilters(): void {
+    this.filters = {
+      nodeTypes: {
+        task: true,
+        user: true,
+        group: true
+      } as NodeTypesFilter,
+      taskStatus: {
+        all: true,
+        pending: false,
+        in_progress: false,
+        completed: false,
+        archived: false
+      } as TaskStatusFilter,
+      userStatus: {
+        all: true,
+        active: false,
+        inactive: false
+      } as UserStatusFilter,
+      groupStatus: {
+        all: true,
+        active: false,
+        inactive: false
+      } as GroupStatusFilter,
+      searchTerm: '',
+      dateRange: {
+        startDate: '',
+        endDate: ''
+      },
+      assignmentStatus: {
+        all: true,
+        assigned: false,
+        unassigned: false
+      } as AssignmentStatusFilter
+    };
+
+    this.applyFilters();
+  }
+
+  /**
+   * Handle node type filter changes
+   */
+  onNodeTypeFilterChange(nodeType: 'task' | 'user' | 'group'): void {
+    this.filters.nodeTypes[nodeType] = !this.filters.nodeTypes[nodeType];
+    this.applyFilters();
+  }
+
+  /**
+   * Handle task status filter changes
+   */
+  onTaskStatusFilterChange(status: string): void {
+    if (status === 'all') {
+      this.filters.taskStatus.all = !this.filters.taskStatus.all;
+      
+      // If "all" is selected, deselect others
+      if (this.filters.taskStatus.all) {
+        Object.keys(this.filters.taskStatus).forEach(key => {
+          if (key !== 'all') {
+            this.filters.taskStatus[key as keyof typeof this.filters.taskStatus] = false;
+          }
+        });
+      }
+    } else {
+      this.filters.taskStatus[status as keyof typeof this.filters.taskStatus] = 
+        !this.filters.taskStatus[status as keyof typeof this.filters.taskStatus];
+      
+      // If any specific status is selected, deselect "all"
+      if (this.filters.taskStatus[status as keyof typeof this.filters.taskStatus]) {
+        this.filters.taskStatus.all = false;
+      }
+      
+      // If no specific status is selected, select "all"
+      const anySpecificSelected = Object.keys(this.filters.taskStatus)
+        .filter(key => key !== 'all')
+        .some(key => this.filters.taskStatus[key as keyof typeof this.filters.taskStatus]);
+      
+      if (!anySpecificSelected) {
+        this.filters.taskStatus.all = true;
+      }
+    }
+    
+    this.applyFilters();
+  }
+
+  /**
+   * Handle user status filter changes
+   */
+  onUserStatusFilterChange(status: string): void {
+    if (status === 'all') {
+      this.filters.userStatus.all = !this.filters.userStatus.all;
+      if (this.filters.userStatus.all) {
+        this.filters.userStatus.active = false;
+        this.filters.userStatus.inactive = false;
+      }
+    } else {
+      this.filters.userStatus[status as keyof typeof this.filters.userStatus] = 
+        !this.filters.userStatus[status as keyof typeof this.filters.userStatus];
+      
+      if (this.filters.userStatus[status as keyof typeof this.filters.userStatus]) {
+        this.filters.userStatus.all = false;
+      }
+      
+      const anySpecificSelected = this.filters.userStatus.active || this.filters.userStatus.inactive;
+      if (!anySpecificSelected) {
+        this.filters.userStatus.all = true;
+      }
+    }
+    
+    this.applyFilters();
+  }
+
+  /**
+   * Handle group status filter changes
+   */
+  onGroupStatusFilterChange(status: string): void {
+    if (status === 'all') {
+      this.filters.groupStatus.all = !this.filters.groupStatus.all;
+      if (this.filters.groupStatus.all) {
+        this.filters.groupStatus.active = false;
+        this.filters.groupStatus.inactive = false;
+      }
+    } else {
+      this.filters.groupStatus[status as keyof typeof this.filters.groupStatus] = 
+        !this.filters.groupStatus[status as keyof typeof this.filters.groupStatus];
+      
+      if (this.filters.groupStatus[status as keyof typeof this.filters.groupStatus]) {
+        this.filters.groupStatus.all = false;
+      }
+      
+      const anySpecificSelected = this.filters.groupStatus.active || this.filters.groupStatus.inactive;
+      if (!anySpecificSelected) {
+        this.filters.groupStatus.all = true;
+      }
+    }
+    
+    this.applyFilters();
+  }
+
+  /**
+   * Handle assignment status filter changes
+   */
+  onAssignmentStatusFilterChange(status: string): void {
+    if (status === 'all') {
+      this.filters.assignmentStatus.all = !this.filters.assignmentStatus.all;
+      if (this.filters.assignmentStatus.all) {
+        this.filters.assignmentStatus.assigned = false;
+        this.filters.assignmentStatus.unassigned = false;
+      }
+    } else {
+      this.filters.assignmentStatus[status as keyof typeof this.filters.assignmentStatus] = 
+        !this.filters.assignmentStatus[status as keyof typeof this.filters.assignmentStatus];
+      
+      if (this.filters.assignmentStatus[status as keyof typeof this.filters.assignmentStatus]) {
+        this.filters.assignmentStatus.all = false;
+      }
+      
+      const anySpecificSelected = this.filters.assignmentStatus.assigned || this.filters.assignmentStatus.unassigned;
+      if (!anySpecificSelected) {
+        this.filters.assignmentStatus.all = true;
+      }
+    }
+    
+    this.applyFilters();
+  }
+
+  /**
+   * Handle search term changes
+   */
+  onSearchTermChange(): void {
+    this.applyFilters();
+  }
+
+  /**
+   * Clear search term
+   */
+  clearSearch(): void {
+    this.filters.searchTerm = '';
+    this.applyFilters();
+  }
+
+  /**
+   * Handle date range changes
+   */
+  onDateRangeChange(): void {
+    this.applyFilters();
+  }
+
+  /**
+   * Get count of nodes for a specific type
+   */
+  getNodeTypeCount(nodeType: 'task' | 'user' | 'group'): number {
+    return this.allNodes.filter(node => node.type === nodeType).length;
+  }
+
+  /**
+   * Get count of filtered nodes for a specific type
+   */
+  getFilteredNodeTypeCount(nodeType: 'task' | 'user' | 'group'): number {
+    return this.filteredNodes.filter(node => node.type === nodeType).length;
+  }
+
+  /**
+   * Get count of active filters
+   */
+  getActiveFiltersCount(): number {
+    let count = 0;
+    
+    // Check node types (count as active if any type is disabled)
+    const allNodeTypesEnabled = this.filters.nodeTypes.task && 
+                               this.filters.nodeTypes.user && 
+                               this.filters.nodeTypes.group;
+    if (!allNodeTypesEnabled) count++;
+    
+    // Check search term
+    if (this.filters.searchTerm.trim()) count++;
+    
+    // Check task status filters
+    if (!this.filters.taskStatus.all) count++;
+    
+    // Check user status filters
+    if (!this.filters.userStatus.all) count++;
+    
+    // Check group status filters
+    if (!this.filters.groupStatus.all) count++;
+    
+    // Check assignment status filters
+    if (!this.filters.assignmentStatus.all) count++;
+    
+    // Check date range filters
+    if (this.filters.dateRange.startDate || this.filters.dateRange.endDate) count++;
+    
+    return count;
+  }
+
+  // ======================== QUICK FILTER METHODS ========================
+
+  /**
+   * Quick filter to show only tasks
+   */
+  quickFilterTasksOnly(): void {
+    this.resetFilters();
+    this.filters.nodeTypes.user = false;
+    this.filters.nodeTypes.group = false;
+    this.applyFilters();
+  }
+
+  /**
+   * Quick filter to show only users
+   */
+  quickFilterUsersOnly(): void {
+    this.resetFilters();
+    this.filters.nodeTypes.task = false;
+    this.filters.nodeTypes.group = false;
+    this.applyFilters();
+  }
+
+  /**
+   * Quick filter to show only groups
+   */
+  quickFilterGroupsOnly(): void {
+    this.resetFilters();
+    this.filters.nodeTypes.task = false;
+    this.filters.nodeTypes.user = false;
+    this.applyFilters();
+  }
+
+  /**
+   * Quick filter to show only unassigned tasks
+   */
+  quickFilterUnassignedTasks(): void {
+    this.resetFilters();
+    this.filters.nodeTypes.user = false;
+    this.filters.nodeTypes.group = false;
+    this.filters.assignmentStatus.all = false;
+    this.filters.assignmentStatus.unassigned = true;
+    this.applyFilters();
   }
 }
